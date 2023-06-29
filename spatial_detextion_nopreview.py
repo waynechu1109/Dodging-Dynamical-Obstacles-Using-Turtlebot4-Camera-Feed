@@ -120,7 +120,19 @@ with dai.Device(pipeline) as device:
             newlist = np.array(newlist)
             if newlist.shape[0]>0:
                 
-                print(newlist[0].spatialCoordinates.x)
+                # print(newlist[0].spatialCoordinates.x)
+                # print(newlist[0].spatialCoordinates.y)
+                # print(newlist[0].spatialCoordinates.z)
+                # print()
+
+                data_x = str(newlist[0].spatialCoordinates.x)
+                data_y = str(newlist[0].spatialCoordinates.y)
+                data_z = str(newlist[0].spatialCoordinates.z)
+                print(data_x)
+                print(data_y)
+                print(data_z)
+                print()                
+
             else:
                 print("Waiting for object to be tracked. List is of 0 size")
        
