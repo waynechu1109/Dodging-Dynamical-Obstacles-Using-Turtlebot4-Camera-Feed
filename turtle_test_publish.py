@@ -13,8 +13,7 @@ import time
 
 from std_msgs.msg import String
 
-
-raw_data = [0, 0, 0]
+raw_data = [0, 0]
 with open("/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller/data.txt", "w") as file:
     file.write("")  # Overwrite the file with an empty string
 
@@ -51,14 +50,24 @@ def main(args=None):
     camera_thread = threading.Thread(target = start_camera)
     camera_thread.start()
 
+    time.sleep(5)  # wait 5 seconds for the camera to be ready
+    counter = 0
     while rclpy.ok():
-        # print("now in node...")
         global raw_data  # Use the global variable within the method
-        # print("in node: ",raw_data)
-        print("in node ...")
+        raw_data[1] = raw_data[0]
+        # print("now in node...")
+        print("in node: ",raw_data[1])
+        
+        # print("in node ...")
+        with open("/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller/data.txt", "r") as file:
+            lines = file.readlines()
+
         # raw_data = get_data()
-        print("get data: ", raw_data)
+        # print("get data with line: ", lines)
         time.sleep(1)  # seconds
+
+        raw_data[0] = lines[counter]
+        counter += 1
 
 
     rclpy.spin(node)      # node will be kept alive until ^C

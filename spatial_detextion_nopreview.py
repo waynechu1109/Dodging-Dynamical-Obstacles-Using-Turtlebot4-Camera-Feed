@@ -139,7 +139,7 @@ with dai.Device(pipeline) as device:
                 data[1] = newlist[0].spatialCoordinates.y
                 data[2] = newlist[0].spatialCoordinates.z
 
-                print(data)
+                # print(data)
                 # Open the file in write mode
                 with open("/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller/data.txt", "a") as file:
                     file.write(str(data) + "\n")  # Write the data to the file
