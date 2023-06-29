@@ -98,7 +98,11 @@ with dai.Device(pipeline) as device:
     fps = 0
     color = (255, 255, 255)
 
+    # for t in range (50):
     while(True):
+
+        data = [0, 0, 0]  # the list to store the data
+
         #imgFrame = preview.get()
         track = tracklets.get()
 
@@ -115,9 +119,9 @@ with dai.Device(pipeline) as device:
         '''
         NEW CODE
         '''
-        if (counter==5):
+        if (counter==3):
             newlist = trackletsData.copy()
-            newlist = np.array(newlist)
+            newlist = np.array(newlist)     # transfer newlist into array
             if newlist.shape[0]>0:
                 
                 # print(newlist[0].spatialCoordinates.x)
@@ -125,9 +129,11 @@ with dai.Device(pipeline) as device:
                 # print(newlist[0].spatialCoordinates.z)
                 # print()
 
-                data_x = str(newlist[0].spatialCoordinates.x)
-                data_y = str(newlist[0].spatialCoordinates.y)
-                data_z = str(newlist[0].spatialCoordinates.z)
+                data[0] = newlist[0].spatialCoordinates.x
+                data[1] = newlist[0].spatialCoordinates.y
+                data[2] = newlist[0].spatialCoordinates.z
+
+                print(data)
                 # print("directly print x: ", data_x)
                 # print(data_y)
                 # print(data_z)
@@ -135,7 +141,11 @@ with dai.Device(pipeline) as device:
 
             else:
                 # print("Waiting for object to be tracked. List is of 0 size")
-                pass
+                data[0] = None
+                data[1] = None
+                data[2] = None
+
+                # print(data)
        
         # for t in trackletsData:
         #     roi = t.roi.denormalize(frame.shape[1], frame.shape[0])
