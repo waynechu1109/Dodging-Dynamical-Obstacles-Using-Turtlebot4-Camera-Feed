@@ -4,7 +4,6 @@ from pathlib import Path
 import cv2
 import depthai as dai
 import numpy as np
-import time
 import argparse
 
 import rclpy
@@ -13,6 +12,11 @@ import threading
 import time
 
 from std_msgs.msg import String
+
+
+raw_data = [0, 0, 0]
+with open("/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller/data.txt", "w") as file:
+    file.write("")  # Overwrite the file with an empty string
 
 class turtle_test_publish(Node):
 
@@ -37,7 +41,7 @@ class turtle_test_publish(Node):
 def start_camera(args=None):
     import sys
     sys.path.append('/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller')
-    from spatial_detextion_nopreview import data
+    import spatial_detextion_nopreview
 
 
 def main(args=None):
@@ -48,7 +52,12 @@ def main(args=None):
     camera_thread.start()
 
     while rclpy.ok():
-        print("now in node...")
+        # print("now in node...")
+        global raw_data  # Use the global variable within the method
+        # print("in node: ",raw_data)
+        print("in node ...")
+        # raw_data = get_data()
+        print("get data: ", raw_data)
         time.sleep(1)  # seconds
 
 

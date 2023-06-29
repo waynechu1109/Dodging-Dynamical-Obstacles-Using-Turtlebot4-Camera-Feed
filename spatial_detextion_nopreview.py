@@ -7,6 +7,12 @@ import numpy as np
 import time
 import argparse
 
+data = [0, 0, 0]  # the list to store the data
+
+# def get_data(args=None):
+#     global data
+#     return data
+
 labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow",
             "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
@@ -101,7 +107,7 @@ with dai.Device(pipeline) as device:
     # for t in range (50):
     while(True):
 
-        data = [0, 0, 0]  # the list to store the data
+        
 
         #imgFrame = preview.get()
         track = tracklets.get()
@@ -134,6 +140,10 @@ with dai.Device(pipeline) as device:
                 data[2] = newlist[0].spatialCoordinates.z
 
                 print(data)
+                # Open the file in write mode
+                with open("/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller/data.txt", "a") as file:
+                    file.write(str(data) + "\n")  # Write the data to the file
+
                 # print("directly print x: ", data_x)
                 # print(data_y)
                 # print(data_z)
@@ -146,6 +156,8 @@ with dai.Device(pipeline) as device:
                 data[2] = None
 
                 # print(data)
+                with open("/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller/data.txt", "a") as file:
+                    file.write(str(data) + "\n")  # Write the data to the file
        
         # for t in trackletsData:
         #     roi = t.roi.denormalize(frame.shape[1], frame.shape[0])
