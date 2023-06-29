@@ -128,13 +128,14 @@ with dai.Device(pipeline) as device:
                 data_x = str(newlist[0].spatialCoordinates.x)
                 data_y = str(newlist[0].spatialCoordinates.y)
                 data_z = str(newlist[0].spatialCoordinates.z)
-                print(data_x)
-                print(data_y)
-                print(data_z)
-                print()                
+                # print("directly print x: ", data_x)
+                # print(data_y)
+                # print(data_z)
+                # print()                
 
             else:
-                print("Waiting for object to be tracked. List is of 0 size")
+                # print("Waiting for object to be tracked. List is of 0 size")
+                pass
        
         # for t in trackletsData:
         #     roi = t.roi.denormalize(frame.shape[1], frame.shape[0])

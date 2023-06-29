@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
-import sys
-
-sys.path.append('/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller')
-import spatial_detextion_nopreview      # import the file that access the camera
+# import sys
+# sys.path.append('/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller')
+# import spatial_detextion_nopreview      # import the file that access the camera
 
 from pathlib import Path
 import cv2
@@ -25,6 +24,13 @@ class turtle_test_publish(Node):
                                          # methods and properties of a parent or sibling class.
         self.cmd_data_publisher_ = self.create_publisher(String, 'camera_data',10)
         self.get_logger().info("Data publisher has been started")
+
+        import sys
+        sys.path.append('/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller')
+        import spatial_detextion_nopreview      # import the file that access the camera
+
+        print(spatial_detextion_nopreview.data_x)
+
         self.counter_ = 0
         self.create_timer(1.0, self.timer_callback)  # create a timer callback every 1 sec
 
@@ -37,9 +43,6 @@ class turtle_test_publish(Node):
 
 def main(args=None):
     rclpy.init(args=args) # initialize rclpy
-    ##(node)##
-
-    ##(node)##
     node = turtle_test_publish()     # create node
     rclpy.spin(node)      # node will be kept alive until ^C
     rclpy.shutdown()
@@ -47,10 +50,7 @@ def main(args=None):
 
 ################################################################
 
-
-
-
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
 
 
