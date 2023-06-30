@@ -141,7 +141,7 @@ with dai.Device(pipeline) as device:
 
                 # print(data)
                 # Open the file in write mode
-                with open("/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller/data.txt", "a") as file:
+                with open("/home/parallels/ros2_ws/src/my_robot_controller/my_robot_controller/data.txt", "a") as file:
                     file.write(str(data) + "\n")  # Write the data to the file
 
                 # print("directly print x: ", data_x)
@@ -156,7 +156,7 @@ with dai.Device(pipeline) as device:
                 data[2] = None
 
                 # print(data)
-                with open("/home/waynechu/ros2_ws/src/my_robot_controller/my_robot_controller/data.txt", "a") as file:
+                with open("/home/parallels/ros2_ws/src/my_robot_controller/my_robot_controller/data.txt", "a") as file:
                     file.write(str(data) + "\n")  # Write the data to the file
        
         # for t in trackletsData:
