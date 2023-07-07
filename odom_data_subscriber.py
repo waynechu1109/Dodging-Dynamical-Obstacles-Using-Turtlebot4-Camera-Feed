@@ -1,10 +1,15 @@
+#!/usr/bin/env python3
+
 import rclpy
+import time
+import threading
 import numpy as np
 import transforms3d.euler as euler
 from rclpy.node import Node
 
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Twist
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 # state_arr = np.zeros((50, 3))
@@ -14,13 +19,20 @@ diff_arr = np.zeros((1, 3))
 update_freq = 20.0  # Hz
 velocity = 0.0
 omega = 0.0
+x_velo = 0.0
+y_velo = 0.0
 # counter = 1                        # record the index
+
+# constants
+k1 = 1.0
+k2 = 1.0
 
 class odom_data_subscriber(Node):
 
     def __init__(self):
         super().__init__("odom_data_subscriber")
-        self.get_logger().info("start!456!")
+        self.publisher_ = self.create_publisher(Twist, '/redwood/cmd_vel', 10)
+        self.get_logger().info("start!789!")
 
         qos_profile = QoSProfile(
             depth = 10,
@@ -60,25 +72,44 @@ class odom_data_subscriber(Node):
         # self.get_logger().info("Received Odometry: x=%.2f, y=%.2f" % (msg.pose.pose.position.x, msg.pose.pose.position.y))
         # print("theta: ", euler_angles[0])
 
-        # calculate the angular velo.
-        omega = (state_arr[0][2] - state_arr[1][2]) / (1.0/update_freq)    
+        # calculate the difference
+        for j in range(3):
+            diff_arr[0][j] = state_arr[0][j] - desired_arr[0][j]
 
-        # calculate the linear velo.
-        x_velo = (state_arr[0][0] - state_arr[1][0]) / (1.0/update_freq)
-        y_velo = (state_arr[0][1] - state_arr[1][1]) / (1.0/update_freq)
-        velocity = np.sqrt(x_velo**2 + y_velo**2)
+        z1 = diff_arr[0][2]
+        z2 = diff_arr[0][0]*np.cos(diff_arr[0][2]) + diff_arr[0][1]*np.sin(diff_arr[0][2])
+        z3 = diff_arr[0][0]*np.sin(diff_arr[0][2]) - diff_arr[0][1]*np.cos(diff_arr[0][2])
 
-        diff_arr[0][0] = state_arr[0][0] - desired_arr[0][0]
-        diff_arr[0][1] = state_arr[0][1] - desired_arr[0][1]
-        diff_arr[0][2] = state_arr[0][2] - desired_arr[0][2]
+        x1 = z1
+        x2 = z2
+        x3 = -2*z3+z1*z2
+
+        u1 = -k1*x1 + ((k2*x3)/(x1**2+x2**2))*x2
+        u2 = -k1*x2 - ((k2*x3)/(x1**2+x2**2))*x1
+
+        omega = u1
+        velocity = u2 + z3*u1
 
         print("state: ", state_arr[0])
-        print("diff: ", diff_arr)
-        print("omega: ", omega)
-        print("velocity: ", velocity)
+        # print("diff: ", diff_arr)
+        print("omega: ", omega, " velocity: ", velocity)
         print()
 
         # counter += 1
+
+    def send_driving_command(self):
+        while rclpy.ok():
+            print("now sending driving command")
+            global x_velo, y_velo, velocity, diff_arr, omega
+            x_velo = velocity*np.cos(diff_arr[0][2])
+            y_velo = velocity*np.sin(diff_arr[0][2])
+            msg = Twist()
+            msg.linear.x = x_velo
+            msg.linear.y = y_velo
+            msg.angular.z = omega
+            self.publisher_.publish(msg)
+            time.sleep(0.5)
+        
 
 
 def main(args=None):
@@ -91,11 +122,12 @@ def main(args=None):
 
     rclpy.init(args=args)
     Odom_data_subscriber = odom_data_subscriber()
+
+    driving_thread = threading.Thread(target = Odom_data_subscriber.send_driving_command)
+    driving_thread.start()
+
     rclpy.spin(Odom_data_subscriber)
 
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
     Odom_data_subscriber.destroy_node()
     rclpy.shutdown()
 
