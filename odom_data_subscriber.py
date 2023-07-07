@@ -9,8 +9,11 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 # state_arr = np.zeros((50, 3))
 desired_arr = np.zeros((1, 3))
-state_arr = np.zeros((1, 3))
+state_arr = np.zeros((2, 3))
 diff_arr = np.zeros((1, 3))
+update_freq = 20.0  # Hz
+velocity = 0.0
+omega = 0.0
 # counter = 1                        # record the index
 
 class odom_data_subscriber(Node):
@@ -32,7 +35,11 @@ class odom_data_subscriber(Node):
         )
 
     def odom_callback(self, msg):
-        global counter, state_arr, diff_arr, desired_arr        
+        global counter, state_arr, diff_arr, desired_arr, update_freq, velocity, omega
+
+        # store the old data
+        for i in range(3):
+            state_arr[1][i] = state_arr[0][i]
 
         # record the data
         # state_arr[counter-1][0] = msg.pose.pose.position.x
@@ -53,12 +60,22 @@ class odom_data_subscriber(Node):
         # self.get_logger().info("Received Odometry: x=%.2f, y=%.2f" % (msg.pose.pose.position.x, msg.pose.pose.position.y))
         # print("theta: ", euler_angles[0])
 
+        # calculate the angular velo.
+        omega = (state_arr[0][2] - state_arr[1][2]) / (1.0/update_freq)    
+
+        # calculate the linear velo.
+        x_velo = (state_arr[0][0] - state_arr[1][0]) / (1.0/update_freq)
+        y_velo = (state_arr[0][1] - state_arr[1][1]) / (1.0/update_freq)
+        velocity = np.sqrt(x_velo**2 + y_velo**2)
+
         diff_arr[0][0] = state_arr[0][0] - desired_arr[0][0]
         diff_arr[0][1] = state_arr[0][1] - desired_arr[0][1]
         diff_arr[0][2] = state_arr[0][2] - desired_arr[0][2]
 
-        print("state: ", state_arr)
+        print("state: ", state_arr[0])
         print("diff: ", diff_arr)
+        print("omega: ", omega)
+        print("velocity: ", velocity)
         print()
 
         # counter += 1
