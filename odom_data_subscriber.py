@@ -24,8 +24,8 @@ y_velo = 0.0
 # counter = 1                        # record the index
 
 # constants
-k1 = 1.0
-k2 = 1.0
+k1 = 0.001
+k2 = 0.001
 
 class odom_data_subscriber(Node):
 
@@ -92,25 +92,38 @@ class odom_data_subscriber(Node):
 
         print("state: ", state_arr[0])
         # print("diff: ", diff_arr)
-        print("omega: ", omega, " velocity: ", velocity)
+        print(" velocity: ", velocity , "omega: ", omega)
         print()
 
         # counter += 1
 
-    def send_driving_command(self):
+    def drive(self):
         while rclpy.ok():
-            print("now sending driving command")
+            # print("now sending driving command")
             global x_velo, y_velo, velocity, diff_arr, omega
-            x_velo = velocity*np.cos(diff_arr[0][2])
-            y_velo = velocity*np.sin(diff_arr[0][2])
+            # x_velo = velocity*np.cos(diff_arr[0][2])
+            # y_velo = velocity*np.sin(diff_arr[0][2])
             msg = Twist()
-            msg.linear.x = x_velo
-            msg.linear.y = y_velo
-            msg.angular.z = omega
+
+            if velocity >= 0:
+                msg.linear.x = 0.1* velocity      # need to modify
+                # msg.linear.y = y_velo
+                msg.angular.z = omega
+                self.publisher_.publish(msg)
+                time.sleep(0.3)
+            else:
+                self.turn_around(msg)
+
+    def turn_around(self, msg):
+        global state_arr
+        old_angle = state_arr[0][2]
+        # print("old angle: ", old_angle)
+        while np.abs(state_arr[0][2] - old_angle) < 1.5 or np.abs(state_arr[0][2] - old_angle) > 1.7:
+            print("diff.: ", np.abs(state_arr[0][2] - old_angle))
+            msg.linear.x = float(0)
+            msg.angular.z = float(0.05)
             self.publisher_.publish(msg)
             time.sleep(0.5)
-        
-
 
 def main(args=None):
     global desired_arr, state_arr, diff_arr
@@ -123,7 +136,7 @@ def main(args=None):
     rclpy.init(args=args)
     Odom_data_subscriber = odom_data_subscriber()
 
-    driving_thread = threading.Thread(target = Odom_data_subscriber.send_driving_command)
+    driving_thread = threading.Thread(target = Odom_data_subscriber.drive)
     driving_thread.start()
 
     rclpy.spin(Odom_data_subscriber)
@@ -131,8 +144,6 @@ def main(args=None):
     Odom_data_subscriber.destroy_node()
     rclpy.shutdown()
 
-
 if __name__ == '__main__':
     main()
-
 
