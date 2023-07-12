@@ -16,23 +16,22 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 desired_arr = np.zeros((1, 3))
 state_arr = np.zeros((2, 3))
 diff_arr = np.zeros((1, 3))
-update_freq = 20.0  # Hz
 velocity = 0.0
 omega = 0.0
 x_velo = 0.0
 y_velo = 0.0
-# counter = 1                        # record the index
+iteration = 0                        # record the index
 
 # constants
-k1 = 0.001
-k2 = 0.001
+k1 = 400e-4      # speed
+k2 = 5*k1       # trajectory
 
 class odom_data_subscriber(Node):
 
     def __init__(self):
         super().__init__("odom_data_subscriber")
         self.publisher_ = self.create_publisher(Twist, '/redwood/cmd_vel', 10)
-        self.get_logger().info("start!789!")
+        self.get_logger().info("start!246!")
 
         qos_profile = QoSProfile(
             depth = 10,
@@ -47,15 +46,13 @@ class odom_data_subscriber(Node):
         )
 
     def odom_callback(self, msg):
-        global counter, state_arr, diff_arr, desired_arr, update_freq, velocity, omega
+        global iteration, state_arr, diff_arr, desired_arr, velocity, omega
 
         # store the old data
         for i in range(3):
             state_arr[1][i] = state_arr[0][i]
 
         # record the data
-        # state_arr[counter-1][0] = msg.pose.pose.position.x
-        # state_arr[counter-1][1] = msg.pose.pose.position.y
         state_arr[0][0] = msg.pose.pose.position.x
         state_arr[0][1] = msg.pose.pose.position.y
         quaternion = (msg.pose.pose.orientation.x,
@@ -64,13 +61,7 @@ class odom_data_subscriber(Node):
                       msg.pose.pose.orientation.w
                      )
         euler_angles = euler.quat2euler(quaternion, 'sxyz')
-        # print(euler_angles)
-        # state_arr[counter-1][2] = euler_angles[0]  # get the "yaw" data
         state_arr[0][2] = euler_angles[0]  # get the "yaw" data
-
-        # Print received odometry data
-        # self.get_logger().info("Received Odometry: x=%.2f, y=%.2f" % (msg.pose.pose.position.x, msg.pose.pose.position.y))
-        # print("theta: ", euler_angles[0])
 
         # calculate the difference
         for j in range(3):
@@ -88,14 +79,19 @@ class odom_data_subscriber(Node):
         u2 = -k1*x2 - ((k2*x3)/(x1**2+x2**2))*x1
 
         omega = u1
-        velocity = u2 + z3*u1
+        # get start from zero velocity
+        if iteration <= 50:
+            velocity = ((iteration+5)/(50+5))*(u2 + z3*u1)
+        else:
+            velocity = 1*(u2 + z3*u1)   # the linear velocoty of the robot
 
         print("state: ", state_arr[0])
-        # print("diff: ", diff_arr)
-        print(" velocity: ", velocity , "omega: ", omega)
+        # print(" velocity: ", velocity , "omega: ", omega)
         print()
 
-        # counter += 1
+        # count iteration only if the robot starts moving
+        if np.abs(state_arr[1][0] - state_arr[0][0]) > 0.001 or np.abs(state_arr[1][1] - state_arr[0][1]) > 0.001:
+            iteration += 1
 
     def drive(self):
         while rclpy.ok():
@@ -106,9 +102,10 @@ class odom_data_subscriber(Node):
             msg = Twist()
 
             if velocity >= 0:
-                msg.linear.x = 0.1* velocity      # need to modify
+                msg.linear.x = velocity
                 # msg.linear.y = y_velo
                 msg.angular.z = omega
+                # print("published: ", msg.linear.x, msg.angular.z)
                 self.publisher_.publish(msg)
                 time.sleep(0.3)
             else:
@@ -119,11 +116,11 @@ class odom_data_subscriber(Node):
         old_angle = state_arr[0][2]
         # print("old angle: ", old_angle)
         while np.abs(state_arr[0][2] - old_angle) < 1.5 or np.abs(state_arr[0][2] - old_angle) > 1.7:
-            print("diff.: ", np.abs(state_arr[0][2] - old_angle))
+            # print("diff.: ", np.abs(state_arr[0][2] - old_angle))
             msg.linear.x = float(0)
             msg.angular.z = float(0.05)
             self.publisher_.publish(msg)
-            time.sleep(0.5)
+            time.sleep(0.3)
 
 def main(args=None):
     global desired_arr, state_arr, diff_arr
