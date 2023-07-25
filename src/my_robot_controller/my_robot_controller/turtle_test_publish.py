@@ -26,7 +26,7 @@ class turtle_test_publish(Node):
 
         super().__init__("turtle_test_publish")   # node name, super() give access to 
                                          # methods and properties of a parent or sibling class.
-        self.publisher_ = self.create_publisher(String, 'chatter',10)
+        self.publisher_ = self.create_publisher(String, 'camera_data',10)
         timer_period = 1  # seconds
         self.get_logger().info("Data publisher has been started 178~~")
         self.counter_ = 0
