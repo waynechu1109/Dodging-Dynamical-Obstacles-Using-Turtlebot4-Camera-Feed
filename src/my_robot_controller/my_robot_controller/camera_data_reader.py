@@ -4,15 +4,18 @@ import time
 from rclpy.node import Node
 
 from std_msgs.msg import String
-# from std_msgs.msg import Float32
+from std_msgs.msg import Float64MultiArray
 
 pos_arr = [[0., 0.], [0., 0.], [0., 0.]]
+x_velo, z_velo = 0., 0.
 last_callback_time = None
 
 class camera_data_reader(Node):
 
     def __init__(self):
         super().__init__('camera_data_reader')
+
+        # subscriber for camera data
         self.subscription = self.create_subscription(
             String,
             '/camera_data',
@@ -20,8 +23,17 @@ class camera_data_reader(Node):
             10)
         self.subscription  # prevent unused variable warning
 
+        # publisher for obstacle info
+        self.publisher_ = self.create_publisher(
+            Float64MultiArray,
+            '/obstacle_info',
+            10)
+        timer_period = 0.3 # sec
+        self.timer = self.create_timer(timer_period, self.publisher_callback)
+
+
     def reader_callback(self, msg):
-        global pos_arr, last_callback_time
+        global pos_arr, last_callback_time, x_velo, z_velo
         elapsed_time = 0
         callback_start_time = time.time()
         # Calculate elapsed time from the previous callback
@@ -75,6 +87,19 @@ class camera_data_reader(Node):
             print('z celocity:', z_velo)
         else:
             print('velocity not available...')
+
+    def publisher_callback(self):
+        global pos_arr, x_velo, z_velo
+        msg = Float64MultiArray()  # data to be published
+
+        ###### need some modification #####
+        if (pos_arr[0][0] is not None
+            and pos_arr[0][1] is not None
+            and pos_arr[2][0] is not None
+            and pos_arr[2][1] is not None):
+            msg.data = [x_velo, 0., z_velo]
+            self.publisher_.publish(msg)
+            # self.get_logger().info('Publishing: "%f"' % msg.data)
 
     def get_velo(self, elapsed_time):
         x_velo = (pos_arr[0][0] - pos_arr[0][1])/elapsed_time
