@@ -27,10 +27,10 @@ class turtle_test_publish(Node):
         super().__init__("turtle_test_publish")   # node name, super() give access to 
                                          # methods and properties of a parent or sibling class.
         self.publisher_ = self.create_publisher(String, 'camera_data',10)
-        timer_period = 1  # seconds
+        timer_period = 0.3  # seconds
         self.get_logger().info("Data publisher has been started 178~~")
         self.counter_ = 0
-        self.create_timer(timer_period, self.timer_callback)  # create a timer callback every 1 sec
+        self.create_timer(timer_period, self.timer_callback)  # create a timer callback every 0.3 sec
 
     def timer_callback(self):
         global publish_data
@@ -60,7 +60,7 @@ def publish(args=None):
             else:
                 continue
 
-        time.sleep(1)  # seconds
+        time.sleep(0.3)  # seconds
 
         if len(lines) >= 1:
             print(lines[len(lines)-1])

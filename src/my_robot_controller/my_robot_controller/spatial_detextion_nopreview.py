@@ -113,7 +113,7 @@ with dai.Device(pipeline) as device:
 
         counter+=1
         current_time = time.monotonic()
-        if (current_time - startTime) > 1 :
+        if (current_time - startTime) > 0.3 :
             fps = counter / (current_time - startTime)
             counter = 0
             startTime = current_time
@@ -136,7 +136,7 @@ with dai.Device(pipeline) as device:
                 # print(data)
                 # Open the file in write mode
                 with open(working_file, "a") as file:
-                    file.write(str(data)+"\r\n")  # Write the data to the file
+                    file.write(str(data)+"\r")  # Write the data to the file
 
                 # print("directly print x: ", data_x)
                 # print(data_y)
@@ -151,7 +151,7 @@ with dai.Device(pipeline) as device:
 
                 # print(data)
                 with open(working_file, "a") as file:
-                    file.write(str(data)+"\r\n")  # Write the data to the file
+                    file.write(str(data)+"\r")  # Write the data to the file
 
         # for t in trackletsData:
         #     roi = t.roi.denormalize(frame.shape[1], frame.shape[0])
@@ -180,4 +180,4 @@ with dai.Device(pipeline) as device:
         # cv2.imshow("tracker", frame)
 
         if cv2.waitKey(1) == ord('q'):
-            break
+            break                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   

@@ -22,7 +22,7 @@ x_velo = 0.0
 y_velo = 0.0
 iteration = 0                        # record the index
 
-# constants
+# controller constants
 k1 = 400e-4      # speed
 k2 = 5*k1       # trajectory
 
@@ -30,6 +30,8 @@ class odom_data_subscriber(Node):
 
     def __init__(self):
         super().__init__("odom_data_subscriber")
+
+        # publisher for cmd_vel
         self.publisher_ = self.create_publisher(Twist, '/arches/cmd_vel', 10)
         self.get_logger().info("start!246@@@!")
 
@@ -37,13 +39,23 @@ class odom_data_subscriber(Node):
             depth = 10,
             reliability=ReliabilityPolicy.BEST_EFFORT
         )
-
+        # subscriber for odometry
         self.subscription = self.create_subscription(
             Odometry,
             "/arches/odom",
             self.odom_callback,
             qos_profile
         )
+
+        # # subscriber for camera data
+        # self.subscription_camera = self.create_subscription(
+        #     String,
+        #     "/camera_data",
+        #     self.camera_data_callback
+        #     )
+
+    # def camera_data_callback(self, msg):
+    #     self.get_logger().info('The data from camera: "%s"' % msg.data)
 
     def odom_callback(self, msg):
         global iteration, state_arr, diff_arr, desired_arr, velocity, omega
@@ -141,7 +153,11 @@ def main(args=None):
     Odom_data_subscriber.destroy_node()
     rclpy.shutdown()
 
-if __name__ == '__main__':
-    main()
 
+
+
+
+
+# if __name__ == '__main__':
+#     main()
 
