@@ -97,7 +97,7 @@ class camera_data_reader(Node):
             and pos_arr[0][1] is not None
             and pos_arr[2][0] is not None
             and pos_arr[2][1] is not None):
-            msg.data = [x_velo, 0., z_velo]
+            msg.data = [pos_arr[0][0], 0., pos_arr[2][0]]   # don't care about y now
             self.publisher_.publish(msg)
             # self.get_logger().info('Publishing: "%f"' % msg.data)
 
@@ -123,3 +123,4 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+

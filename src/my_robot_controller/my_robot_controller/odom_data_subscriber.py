@@ -8,6 +8,7 @@ import transforms3d.euler as euler
 from rclpy.node import Node
 
 from std_msgs.msg import String
+from std_msgs.msg import Float64MultiArray
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from rclpy.qos import QoSProfile, ReliabilityPolicy
@@ -16,6 +17,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 desired_arr = np.zeros((1, 3))
 state_arr = np.zeros((2, 3))
 diff_arr = np.zeros((1, 3))
+obstacle_state_arr = [0., 0.]  # in odom frame
 velocity = 0.0
 omega = 0.0
 x_velo = 0.0
@@ -33,7 +35,7 @@ class odom_data_subscriber(Node):
 
         # publisher for cmd_vel
         self.publisher_ = self.create_publisher(Twist, '/arches/cmd_vel', 10)
-        self.get_logger().info("start!246@@@!")
+        self.get_logger().info("start!@@@!")
 
         qos_profile = QoSProfile(
             depth = 10,
@@ -47,22 +49,39 @@ class odom_data_subscriber(Node):
             qos_profile
         )
 
-        # # subscriber for camera data
-        # self.subscription_camera = self.create_subscription(
-        #     String,
-        #     "/camera_data",
-        #     self.camera_data_callback
-        #     )
+        # subscriber for obstacle_info
+        self.subscription_obstacle_info = self.create_subscription(
+            Float64MultiArray,
+            "/obstacle_info",
+            self.obstacle_info_callback,
+            10
+            )
 
-    # def camera_data_callback(self, msg):
-    #     self.get_logger().info('The data from camera: "%s"' % msg.data)
+    def obstacle_info_callback(self, msg):
+        global state_arr
+        self.get_logger().info('The data from obstacle_info x, y, z: %f, %f, %f' % (msg.data[0], msg.data[1], msg.data[2]))
+        # print('camera frame:', msg.data[0], msg.data[1], msg.data[2])
+
+        # calculate obstacle's position in odom frame
+        x = state_arr[0][0]
+        y = state_arr[0][1]
+        theta = state_arr[0][2]
+        x_bar = msg.data[0]
+        z_bar = msg.data[2]
+
+        # obstacle in 1st quadrant
+        obstacle_state_arr[0] = x+z_bar*np.cos(theta)+x_bar*np.sin(theta)
+        obstacle_state_arr[1] = y+z_bar*np.sin(theta)-x_bar*np.cos(theta)
+
+        self.get_logger().info('obstacle in odom: %f, %f' % (obstacle_state_arr[0], obstacle_state_arr[1]))
 
     def odom_callback(self, msg):
-        global iteration, state_arr, diff_arr, desired_arr, velocity, omega
+        global iteration, state_arr, diff_arr, desired_arr, velocity, omega, obstacle_state_arr
 
         # store the old data
         for i in range(3):
-            state_arr[1][i] = state_arr[0][i]
+            state_arr[1][i] = state_arr[0][i]  
+            #  old one           new one
 
         # record the data
         state_arr[0][0] = msg.pose.pose.position.x
@@ -98,6 +117,7 @@ class odom_data_subscriber(Node):
             velocity = 1*(u2 + z3*u1)   # the linear velocoty of the robot
 
         print("state: ", state_arr[0])
+        # print("obstacle in odom frame (x, y):", obstacle_state_arr[0], obstacle_state_arr[1])
         # print(" velocity: ", velocity , "omega: ", omega)
         print()
 
@@ -145,8 +165,8 @@ def main(args=None):
     rclpy.init(args=args)
     Odom_data_subscriber = odom_data_subscriber()
 
-    driving_thread = threading.Thread(target = Odom_data_subscriber.drive)
-    driving_thread.start()
+    # driving_thread = threading.Thread(target = Odom_data_subscriber.drive)
+    # driving_thread.start()
 
     rclpy.spin(Odom_data_subscriber)
 
@@ -160,4 +180,5 @@ def main(args=None):
 
 # if __name__ == '__main__':
 #     main()
+
 
