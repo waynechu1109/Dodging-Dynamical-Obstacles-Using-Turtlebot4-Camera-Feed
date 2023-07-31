@@ -62,8 +62,23 @@ class TFListenerNode(Node):
 
                 # convert rotation data into matrix
                 r = R.from_quat([rotation.x, rotation.y, rotation.z, rotation.w])
-                print(r.as_matrix())
+                rotation_matrix = r.as_matrix()
+                
 
+                # create new ones column
+                zero_row = np.zeros((1, 3))
+                transform_matrix = np.vstack((rotation_matrix, zero_row))
+                
+                # create new zero row
+                ones_column = np.ones((4, 1))
+                transform_matrix = np.hstack((transform_matrix, ones_column))
+
+                transform_matrix[0][3] = translation.x
+                transform_matrix[1][3] = translation.y
+                transform_matrix[2][3] = translation.z
+
+
+                print(transform_matrix)
                 print()
 
 
@@ -72,62 +87,62 @@ class TFListenerNode(Node):
                 #     print('Transformation Matrix:')
                 #     print(transform_matrix)
 
-    def get_transform_matrix(self, source_frame, target_frame):
+    # def get_transform_matrix(self, source_frame, target_frame):
 
-        print('now getting transform matrix...')
+    #     print('now getting transform matrix...')
 
 
-        # tf_future = self.tf_buffer.wait_for_transform_async(
-        #     target_frame,
-        #     source_frame,
-        #     time=rclpy.time.Time()
-        # )
+    #     # tf_future = self.tf_buffer.wait_for_transform_async(
+    #     #     target_frame,
+    #     #     source_frame,
+    #     #     time=rclpy.time.Time()
+    #     # )
 
-        # rclpy.spin_until_future_complete(self, tf_future)
-        # print("Got it!")
+    #     # rclpy.spin_until_future_complete(self, tf_future)
+    #     # print("Got it!")
 
-        # try:
-        #     transform_stamped = asyncio.run(self.tf_buffer.lookup_transform_async(
-        #     target_frame,
-        #     source_frame,
-        #     rclpy.time.Time()
-        #     ))
-        #     translation = transform_stamped.transform.translation
-        #     rotation = transform_stamped.transform.rotation
-        #     transform_matrix = tf2_py.transformations.concatenate_matrices(
-        #         tf2_py.transformations.translation_matrix((translation.x, translation.y, translation.z)),
-        #         tf2_py.transformations.quaternion_matrix((rotation.x, rotation.y, rotation.z, rotation.w))
-        #     )
-        #     return transform_matrix
-        # except tf2_ros.LookupException as e:
-        #     self.get_logger().warn('TF Lookup Exception: %s' % e)
-        #     return None
-        # except tf2_ros.ExtrapolationException as e:
-        #     self.get_logger().warn('TF Extrapolation Exception: %s' % e)
-        #     return None
+    #     # try:
+    #     #     transform_stamped = asyncio.run(self.tf_buffer.lookup_transform_async(
+    #     #     target_frame,
+    #     #     source_frame,
+    #     #     rclpy.time.Time()
+    #     #     ))
+    #     #     translation = transform_stamped.transform.translation
+    #     #     rotation = transform_stamped.transform.rotation
+    #     #     transform_matrix = tf2_py.transformations.concatenate_matrices(
+    #     #         tf2_py.transformations.translation_matrix((translation.x, translation.y, translation.z)),
+    #     #         tf2_py.transformations.quaternion_matrix((rotation.x, rotation.y, rotation.z, rotation.w))
+    #     #     )
+    #     #     return transform_matrix
+    #     # except tf2_ros.LookupException as e:
+    #     #     self.get_logger().warn('TF Lookup Exception: %s' % e)
+    #     #     return None
+    #     # except tf2_ros.ExtrapolationException as e:
+    #     #     self.get_logger().warn('TF Extrapolation Exception: %s' % e)
+    #     #     return None
 
-        # 'lookup_transform', 'lookup_transform_async', 'lookup_transform_core', 'lookup_transform_full', 'lookup_transform_full_async'
+    #     # 'lookup_transform', 'lookup_transform_async', 'lookup_transform_core', 'lookup_transform_full', 'lookup_transform_full_async'
 
-        print (self.tf_buffer.lookup_transform(target_frame, source_frame, rclpy.time.Time()))
-        print('tf_beffer:', self.tf_buffer.lookup_transform, self.tf_buffer.lookup_transform_async, self.tf_buffer.lookup_transform_core, 
-              self.tf_buffer.lookup_transform_full, self.tf_buffer.lookup_transform_full_async)
-        quit()
+    #     print (self.tf_buffer.lookup_transform(target_frame, source_frame, rclpy.time.Time()))
+    #     print('tf_beffer:', self.tf_buffer.lookup_transform, self.tf_buffer.lookup_transform_async, self.tf_buffer.lookup_transform_core, 
+    #           self.tf_buffer.lookup_transform_full, self.tf_buffer.lookup_transform_full_async)
+    #     quit()
 
-        try:
-            transform_stamped = self.tf_buffer.lookup_transform(target_frame, source_frame, rclpy.time.Time())
-            translation = transform_stamped.transform.translation
-            rotation = transform_stamped.transform.rotation
-            transform_matrix = tf2_py.transformations.concatenate_matrices(
-                tf2_py.transformations.translation_matrix((translation.x, translation.y, translation.z)),
-                tf2_py.transformations.quaternion_matrix((rotation.x, rotation.y, rotation.z, rotation.w))
-            )
-            return transform_matrix
-        except tf2_ros.LookupException as e:
-            self.get_logger().warn('TF Lookup Exception: %s' % e)
-            return None
-        except tf2_ros.ExtrapolationException as e:
-            self.get_logger().warn('TF Extrapolation Exception: %s' % e)
-            return None
+    #     try:
+    #         transform_stamped = self.tf_buffer.lookup_transform(target_frame, source_frame, rclpy.time.Time())
+    #         translation = transform_stamped.transform.translation
+    #         rotation = transform_stamped.transform.rotation
+    #         transform_matrix = tf2_py.transformations.concatenate_matrices(
+    #             tf2_py.transformations.translation_matrix((translation.x, translation.y, translation.z)),
+    #             tf2_py.transformations.quaternion_matrix((rotation.x, rotation.y, rotation.z, rotation.w))
+    #         )
+    #         return transform_matrix
+    #     except tf2_ros.LookupException as e:
+    #         self.get_logger().warn('TF Lookup Exception: %s' % e)
+    #         return None
+    #     except tf2_ros.ExtrapolationException as e:
+    #         self.get_logger().warn('TF Extrapolation Exception: %s' % e)
+    #         return None
 
 def main(args=None):
     rclpy.init(args=args)
