@@ -17,12 +17,14 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 desired_arr = np.zeros((1, 3))
 state_arr = np.zeros((2, 3))
 diff_arr = np.zeros((1, 3))
-obstacle_state_arr = [0., 0.]  # in odom frame
+obstacle_state_arr = [[0., 0.], [0., 0.]]  # in odom frame
 velocity = 0.0
 omega = 0.0
 x_velo = 0.0
 y_velo = 0.0
 iteration = 0                        # record the index
+
+last_callback_time = None
 
 # controller constants
 k1 = 400e-4      # speed
@@ -35,7 +37,7 @@ class odom_data_subscriber(Node):
 
         # publisher for cmd_vel
         self.publisher_ = self.create_publisher(Twist, '/arches/cmd_vel', 10)
-        self.get_logger().info("start!@@@!")
+        self.get_logger().info("start!###!")
 
         qos_profile = QoSProfile(
             depth = 10,
@@ -58,7 +60,19 @@ class odom_data_subscriber(Node):
             )
 
     def obstacle_info_callback(self, msg):
-        global state_arr
+        global state_arr, last_callback_time
+        elapsed_time = 0
+        callback_start_time = time.time()
+        # Calculate elapsed time from the previous callback
+        if last_callback_time is not None:
+            elapsed_time = callback_start_time - last_callback_time
+            # print('Elapsed time since last callback:', elapsed_time)
+        last_callback_time = callback_start_time
+
+        # refresh data
+        for i in range(2):
+            obstacle_state_arr[1][i] = obstacle_state_arr[0][i]
+
         self.get_logger().info('The data from obstacle_info x, y, z: %f, %f, %f' % (msg.data[0], msg.data[1], msg.data[2]))
         # print('camera frame:', msg.data[0], msg.data[1], msg.data[2])
 
@@ -69,11 +83,18 @@ class odom_data_subscriber(Node):
         x_bar = msg.data[0]
         z_bar = msg.data[2]
 
-        # obstacle in 1st quadrant
-        obstacle_state_arr[0] = x+z_bar*np.cos(theta)+x_bar*np.sin(theta)
-        obstacle_state_arr[1] = y+z_bar*np.sin(theta)-x_bar*np.cos(theta)
+        # record data
+        obstacle_state_arr[0][0] = x+z_bar*np.cos(theta)+x_bar*np.sin(theta)
+        obstacle_state_arr[0][1] = y+z_bar*np.sin(theta)-x_bar*np.cos(theta)
 
-        self.get_logger().info('obstacle in odom: %f, %f' % (obstacle_state_arr[0], obstacle_state_arr[1]))
+        self.get_logger().info('obstacle in odom: %f, %f' % (obstacle_state_arr[0][0], obstacle_state_arr[0][1]))
+        print('velo of obstacle:', self.get_obstacle_velo(elapsed_time))
+
+    def get_obstacle_velo(self, elapsed_time):
+        obstacle_x_velo = (obstacle_state_arr[0][0]-obstacle_state_arr[1][0])/elapsed_time
+        obstacle_y_velo = (obstacle_state_arr[0][1]-obstacle_state_arr[1][1])/elapsed_time
+        obstacle_velo = np.sqrt((obstacle_x_velo)**2 + (obstacle_y_velo)**2)
+        return obstacle_velo
 
     def odom_callback(self, msg):
         global iteration, state_arr, diff_arr, desired_arr, velocity, omega, obstacle_state_arr
