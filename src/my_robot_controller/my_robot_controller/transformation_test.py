@@ -7,21 +7,28 @@ import tf2_msgs.msg
 import asyncio
 import time
 from geometry_msgs.msg import Quaternion
+from nav_msgs.msg import Odometry
 from scipy.spatial.transform import Rotation as R
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 class TFListenerNode(Node):
     def __init__(self):
         super().__init__('tf_listener_node')
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
-        self.get_logger().info("start!#!")
+        self.get_logger().info("start!@@!")
         
-        # Subscribe to the /tf topic
+        qos_profile = QoSProfile(
+            depth = 10,
+            reliability=ReliabilityPolicy.BEST_EFFORT
+        )
+
+        # Subscribe to the /odom topic
         self.tf_subscriber = self.create_subscription(
-            tf2_msgs.msg.TFMessage,
-            '/arches/tf',
+            Odometry,
+            '/arches/odom',
             self.tf_callback,
-            10)
+            qos_profile)
 
     # def tf_callback(self, msg):
     #     # Wait for 2 seconds to give tf_buffer some time to fill up
@@ -36,113 +43,56 @@ class TFListenerNode(Node):
         self.get_logger().info("Received TF data. Waiting for 2 seconds to process.")
         time.sleep(2.0)    
 
-        for transform_stamped in msg.transforms:
-            source_frame = transform_stamped.header.frame_id
-            target_frame = transform_stamped.child_frame_id
-            # print('source:', source_frame)
-            # print('child:', target_frame)
+        # for stamp in msg:
+        #     source_frame = stamp.header.frame_id
+        #     target_frame = stamp.child_frame_id
+        #     # print('source:', source_frame)
+        #     # print('child:', target_frame)
 
-            # Example usage:
-            if source_frame == 'base_link' and target_frame == 'wheel_drop_right':
-                print('source:', source_frame)
-                print('child:', target_frame)
-                # Do something with this specific transform
+        #     # Example usage:
+        #     if source_frame == 'odom' and target_frame == 'base_link':
+        #         print('source:', source_frame)
+        #         print('child:', target_frame)
+        #         # Do something with this specific transform
 
-                translation = transform_stamped.transform.translation
-                rotation = transform_stamped.transform.rotation
+        #         translation = stamp.transform.translation
+        #         rotation = stamp.transform.rotation
 
-                print('translation x:', translation.x)
-                print('translation y:', translation.y)
-                print('translation z:', translation.z)
-
-                print('rotation x:', rotation.x)
-                print('rotation y:', rotation.y)
-                print('rotation z:', rotation.z)
-                print('rotation w:', rotation.w)
-
-                # convert rotation data into matrix
-                r = R.from_quat([rotation.x, rotation.y, rotation.z, rotation.w])
-                rotation_matrix = r.as_matrix()
-                
-
-                # create new ones column
-                zero_row = np.zeros((1, 3))
-                transform_matrix = np.vstack((rotation_matrix, zero_row))
-                
-                # create new zero row
-                ones_column = np.ones((4, 1))
-                transform_matrix = np.hstack((transform_matrix, ones_column))
-
-                transform_matrix[0][3] = translation.x
-                transform_matrix[1][3] = translation.y
-                transform_matrix[2][3] = translation.z
+        print('source: odom')
+        print('child: base_link')
 
 
-                print(transform_matrix)
-                print()
+        print('translation x:', msg.pose.pose.position.x)
+        print('translation y:', msg.pose.pose.position.y)
+        print('translation z:', msg.pose.pose.position.z)
+
+        print('rotation x:', msg.pose.pose.orientation.x)
+        print('rotation y:', msg.pose.pose.orientation.y)
+        print('rotation z:', msg.pose.pose.orientation.z)
+        print('rotation w:', msg.pose.pose.orientation.w)
+
+        # convert rotation data into matrix
+        r = R.from_quat([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, 
+                         msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
+        rotation_matrix = r.as_matrix()
+        
+
+        # create new ones column
+        zero_row = np.zeros((1, 3))
+        transform_matrix = np.vstack((rotation_matrix, zero_row))
+        
+        # create new zero row
+        ones_column = np.ones((4, 1))
+        transform_matrix = np.hstack((transform_matrix, ones_column))
+
+        transform_matrix[0][3] = msg.pose.pose.position.x
+        transform_matrix[1][3] = msg.pose.pose.position.y
+        transform_matrix[2][3] = msg.pose.pose.position.z
 
 
-                # transform_matrix = self.get_transform_matrix(source_frame, target_frame)
-                # if transform_matrix is not None:
-                #     print('Transformation Matrix:')
-                #     print(transform_matrix)
+        print(transform_matrix)
+        print()
 
-    # def get_transform_matrix(self, source_frame, target_frame):
-
-    #     print('now getting transform matrix...')
-
-
-    #     # tf_future = self.tf_buffer.wait_for_transform_async(
-    #     #     target_frame,
-    #     #     source_frame,
-    #     #     time=rclpy.time.Time()
-    #     # )
-
-    #     # rclpy.spin_until_future_complete(self, tf_future)
-    #     # print("Got it!")
-
-    #     # try:
-    #     #     transform_stamped = asyncio.run(self.tf_buffer.lookup_transform_async(
-    #     #     target_frame,
-    #     #     source_frame,
-    #     #     rclpy.time.Time()
-    #     #     ))
-    #     #     translation = transform_stamped.transform.translation
-    #     #     rotation = transform_stamped.transform.rotation
-    #     #     transform_matrix = tf2_py.transformations.concatenate_matrices(
-    #     #         tf2_py.transformations.translation_matrix((translation.x, translation.y, translation.z)),
-    #     #         tf2_py.transformations.quaternion_matrix((rotation.x, rotation.y, rotation.z, rotation.w))
-    #     #     )
-    #     #     return transform_matrix
-    #     # except tf2_ros.LookupException as e:
-    #     #     self.get_logger().warn('TF Lookup Exception: %s' % e)
-    #     #     return None
-    #     # except tf2_ros.ExtrapolationException as e:
-    #     #     self.get_logger().warn('TF Extrapolation Exception: %s' % e)
-    #     #     return None
-
-    #     # 'lookup_transform', 'lookup_transform_async', 'lookup_transform_core', 'lookup_transform_full', 'lookup_transform_full_async'
-
-    #     print (self.tf_buffer.lookup_transform(target_frame, source_frame, rclpy.time.Time()))
-    #     print('tf_beffer:', self.tf_buffer.lookup_transform, self.tf_buffer.lookup_transform_async, self.tf_buffer.lookup_transform_core, 
-    #           self.tf_buffer.lookup_transform_full, self.tf_buffer.lookup_transform_full_async)
-    #     quit()
-
-    #     try:
-    #         transform_stamped = self.tf_buffer.lookup_transform(target_frame, source_frame, rclpy.time.Time())
-    #         translation = transform_stamped.transform.translation
-    #         rotation = transform_stamped.transform.rotation
-    #         transform_matrix = tf2_py.transformations.concatenate_matrices(
-    #             tf2_py.transformations.translation_matrix((translation.x, translation.y, translation.z)),
-    #             tf2_py.transformations.quaternion_matrix((rotation.x, rotation.y, rotation.z, rotation.w))
-    #         )
-    #         return transform_matrix
-    #     except tf2_ros.LookupException as e:
-    #         self.get_logger().warn('TF Lookup Exception: %s' % e)
-    #         return None
-    #     except tf2_ros.ExtrapolationException as e:
-    #         self.get_logger().warn('TF Extrapolation Exception: %s' % e)
-    #         return None
 
 def main(args=None):
     rclpy.init(args=args)
