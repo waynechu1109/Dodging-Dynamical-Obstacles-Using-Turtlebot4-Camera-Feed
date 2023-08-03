@@ -45,7 +45,8 @@ class turtle_test_publish(Node):
 def start_camera(args=None):
     import sys
     sys.path.append(working_dir)
-    import spatial_detextion_nopreview
+    # import spatial_detextion_nopreview
+    import spatial_tiny_yolo_ballonly_nopreview
 
 
 def publish(args=None):
@@ -84,6 +85,7 @@ def main(args=None):
 
 # if __name__ == '__main__':
 #     main()
+
 
 
 
