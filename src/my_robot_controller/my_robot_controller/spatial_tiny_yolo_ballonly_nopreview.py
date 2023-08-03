@@ -138,6 +138,13 @@ with dai.Device(pipeline) as device:
 
     while True:
         # inPreview = previewQueue.get()
+        # try:
+        #     inDet = detectionNNQueue.get()
+        #     depth = depthQueue.get()
+        #     inNN = networkQueue.get()
+        # except:
+        #     print('failure...')
+        
         inDet = detectionNNQueue.get()
         depth = depthQueue.get()
         inNN = networkQueue.get()
@@ -160,7 +167,7 @@ with dai.Device(pipeline) as device:
 
         counter+=1
         current_time = time.monotonic()
-        if (current_time - startTime) > 1 :
+        if (current_time - startTime) > 0.3 :
             fps = counter / (current_time - startTime)
             counter = 0
             startTime = current_time
