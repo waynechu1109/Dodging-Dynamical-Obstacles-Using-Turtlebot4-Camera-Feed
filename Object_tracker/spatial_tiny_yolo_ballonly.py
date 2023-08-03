@@ -39,7 +39,7 @@ labelMap = [
     "suitcase",       "frisbee",    "skis",          "snowboard",     "sports ball", "kite",          "baseball bat",
     "baseball glove", "skateboard", "surfboard",     "tennis racket", "bottle",      "wine glass",    "cup",
     "fork",           "knife",      "spoon",         "bowl",          "banana",      "apple",         "sandwich",
-    "orange",         "broccoli",   "carrot",        "hot dog",       "pizza",       "donut",         "cake",
+    "ball",         "broccoli",   "carrot",        "hot dog",       "pizza",       "donut",         "cake",
     "chair",          "sofa",       "pottedplant",   "bed",           "diningtable", "toilet",        "tvmonitor",
     "laptop",         "mouse",      "remote",        "keyboard",      "cell phone",  "microwave",     "oven",
     "toaster",        "sink",       "refrigerator",  "book",          "clock",       "vase",          "scissors",
@@ -198,7 +198,7 @@ with dai.Device(pipeline) as device:
 
         for detection in detections:
             # Only process "sports ball" class detections
-            if labelMap[detection.label] == "32":
+            if labelMap[detection.label] == "ball":
                 roiData = detection.boundingBoxMapping
                 roi = roiData.roi
                 roi = roi.denormalize(depthFrameColor.shape[1], depthFrameColor.shape[0])
@@ -229,7 +229,7 @@ with dai.Device(pipeline) as device:
 
 
         cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color)
-        cv2.imshow("depth", depthFrameColor)
+        # cv2.imshow("depth", depthFrameColor)
         cv2.imshow("rgb", frame)
 
         if cv2.waitKey(1) == ord('q'):

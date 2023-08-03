@@ -195,7 +195,7 @@ with dai.Device(pipeline) as device:
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, cv2.FONT_HERSHEY_SIMPLEX)
 
         cv2.putText(frame, "NN fps: {:.2f}".format(fps), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color)
-        cv2.imshow("depth", depthFrameColor)
+        # cv2.imshow("depth", depthFrameColor)
         cv2.imshow("rgb", frame)
 
         if cv2.waitKey(1) == ord('q'):
