@@ -13,7 +13,13 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
-import RRT_star as rrts
+# import other function file
+import RRT_star as rrtstar
+import controller as ctr
+import create_BezierCurve
+import calculate_slope
+import do_RRTstar
+import move_next_position
 
 # obstacle information
 obstacle_state_arr = [[0., 0.], [0., 0.]]  # in odom frame

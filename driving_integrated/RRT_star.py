@@ -1,6 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import Node
+
+class Node:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.parent = None
+        self.cost = 0.0
 
 class RRTStar:
     def __init__(self, start, goal, obstacle_list, x_limit, y_limit, step_size=1.0, max_iterations=1000):
