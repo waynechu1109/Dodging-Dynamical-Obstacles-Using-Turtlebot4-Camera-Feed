@@ -69,11 +69,6 @@ step_size = 5.0
 max_iterations = 5000
 # RRT* parameters
 
-# controller parameters
-k1 = 400e-4      # speed
-k2 = 5*k1       # trajectory
-# controller parameters
-
 class odom_data_subscriber(Node):
 
     def __init__(self):
@@ -126,6 +121,8 @@ class odom_data_subscriber(Node):
         for j in range(3):
             diff_arr[0][j] = state_arr[0][j] - target[0][j]
 
+
+        ########controller
         z1 = diff_arr[0][2]
         z2 = diff_arr[0][0]*np.cos(diff_arr[0][2]) + diff_arr[0][1]*np.sin(diff_arr[0][2])
         z3 = diff_arr[0][0]*np.sin(diff_arr[0][2]) - diff_arr[0][1]*np.cos(diff_arr[0][2])
@@ -143,10 +140,9 @@ class odom_data_subscriber(Node):
             robot_velocity = ((iteration+5)/(50+5))*(u2 + z3*u1)
         else:
             robot_velocity = 1*(u2 + z3*u1)   # the linear velocoty of the robot
+        #######controller
 
         print("state: ", state_arr[0])
-        # print("obstacle in odom frame (x, y):", obstacle_state_arr[0], obstacle_state_arr[1])
-        # print(" robot_velocity: ", robot_velocity , "robot_omega: ", robot_omega)
         print()
 
         # count iteration only if the robot starts moving
@@ -154,6 +150,7 @@ class odom_data_subscriber(Node):
             iteration += 1
 
     def drive(self):
+        # keep publishing the data to cmd_velocity to drive the robot
         while rclpy.ok():
             # print("now sending driving command")
             global robot_x_velo, robot_y_velo, robot_velocity, diff_arr, robot_omega
@@ -193,8 +190,8 @@ def main(args=None):
     rclpy.init(args=args)
     Odom_data_subscriber = odom_data_subscriber()
 
-    # driving_thread = threading.Thread(target = Odom_data_subscriber.drive)
-    # driving_thread.start()
+    driving_thread = threading.Thread(target = Odom_data_subscriber.drive)
+    driving_thread.start()
 
     rclpy.spin(Odom_data_subscriber)
 
