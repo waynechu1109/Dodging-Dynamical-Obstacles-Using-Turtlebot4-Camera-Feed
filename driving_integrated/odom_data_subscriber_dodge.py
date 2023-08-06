@@ -23,7 +23,6 @@ import move_next_position
 
 # obstacle information
 obstacle_state_arr = [[0., 0.], [0., 0.]]  # in odom frame
-
 #(new)
 initial_obstacle_position = [0., 0., 0.]
 current_obstacle_position = initial_obstacle_position
@@ -99,30 +98,45 @@ class odom_data_subscriber(Node):
         #     )
 
     def odom_callback(self, msg):
-        global iteration, state_arr, diff_arr, target, robot_velocity, robot_omega, obstacle_state_arr
+        global iteration, state_arr, diff_arr, target, robot_velocity, robot_omega, obstacle_state_arr, nearby, see_obstacle, controller_index
 
-        # store the old data
-        for i in range(3):
-            state_arr[1][i] = state_arr[0][i]  
-            #  old one           new one
+        # check if robot near obstacle, if true:
+        if np.sqrt((current_obstacle_position[0]-current_robot_position[0])**2+
+               (current_obstacle_position[1]-current_robot_position[1])**2
+               ) <= obstacle_radius+robot_radius+safety_margin and dodge == 0:
+            print("iteration:", iteration+1, "obstacle nearby!!")
+            print('RRT* Path Planning...')
+            nearby = 1
+            see_obstacle = 1
+            controller_index = 0
+            dodge = 1
+            robot_velocity = 0
+            robot_omega = 0
 
-        # recording data from /odom as new data
-        state_arr[0][0] = msg.pose.pose.position.x
-        state_arr[0][1] = msg.pose.pose.position.y
-        quaternion = (msg.pose.pose.orientation.x,
-                      msg.pose.pose.orientation.y,
-                      msg.pose.pose.orientation.z,
-                      msg.pose.pose.orientation.w
-                     )
-        euler_angles = euler.quat2euler(quaternion, 'sxyz')
-        state_arr[0][2] = euler_angles[0]  # get the "yaw" data
+        else:
+            # The control to final distination
+            # store the old data
+            for i in range(3):
+                state_arr[1][i] = state_arr[0][i]  
+                #  old one           new one
 
-        # calculate the difference
-        for j in range(3):
-            diff_arr[0][j] = state_arr[0][j] - target[0][j]
-        #### new controller
-        robot_velocity, robot_omega = ctr.controller(diff_x=diff_arr[0][0], diff_y=diff_arr[0][1], diff_theta=diff_arr[0][2],
-                                                        iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega)
+            # recording data from /odom as new data
+            state_arr[0][0] = msg.pose.pose.position.x
+            state_arr[0][1] = msg.pose.pose.position.y
+            quaternion = (msg.pose.pose.orientation.x,
+                        msg.pose.pose.orientation.y,
+                        msg.pose.pose.orientation.z,
+                        msg.pose.pose.orientation.w
+                        )
+            euler_angles = euler.quat2euler(quaternion, 'sxyz')
+            state_arr[0][2] = euler_angles[0]  # get the "yaw" data
+
+            # calculate the difference to final distination
+            for j in range(3):
+                diff_arr[0][j] = state_arr[0][j] - target[0][j]
+            #### new controller
+            robot_velocity, robot_omega = ctr.controller(diff_x=diff_arr[0][0], diff_y=diff_arr[0][1], diff_theta=diff_arr[0][2],
+                                                            iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega)
 
         print("state: ", state_arr[0])
         print()
@@ -169,8 +183,6 @@ class odom_data_subscriber(Node):
             print("Path found!")
             print(path)
             print("The robot orientation: ", current_robot_position[2])
-            # x_sp, y_sp = rrt_star.bspline_interpolation(path)  # Get the B-spline interpolated curve
-            # plt.plot(x_sp, y_sp[1], color='purple')  # Plot the B-spline curve
             rrt_star.plot(path)
             return path
         else:
