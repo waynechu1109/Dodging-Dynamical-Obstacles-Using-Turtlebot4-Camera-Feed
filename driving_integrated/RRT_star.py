@@ -9,6 +9,17 @@ class Node:
         self.cost = 0.0
 
 class RRTStar:
+
+    # RRT* parameters
+    start = (0., 0.)
+    goal = (0., 0.)
+    obstacle_list = []  # Format: (x, y, radius), the position after robot see it
+    x_limit = (0., size)    # need the size of the map
+    y_limit = (0., size)    # need the size of the map
+    step_size = 5.0
+    max_iterations = 5000
+    # RRT* parameters
+
     def __init__(self, start, goal, obstacle_list, x_limit, y_limit, step_size=1.0, max_iterations=1000):
         self.start = Node(start[0], start[1])
         self.goal = Node(goal[0], goal[1])

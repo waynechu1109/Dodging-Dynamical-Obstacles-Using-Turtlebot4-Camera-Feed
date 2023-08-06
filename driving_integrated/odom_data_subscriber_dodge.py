@@ -14,11 +14,11 @@ from geometry_msgs.msg import Twist
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 # import other function file
-import RRT_star as rrtstar
 import controller as ctr
 import create_BezierCurve
 import calculate_slope
-import do_RRTstar
+import RRT_star as rrtSetting
+import do_RRTstar as rrtstar
 import move_next_position
 
 # obstacle information
@@ -34,8 +34,8 @@ obstacle_y_velo = obstacle_velocity* np.sin(current_obstacle_position[2])
 
 # robot information
 robot_radius = 17.    # cm (r)
-initial_robot_position = [249., 250., 1.25*np.pi]    # [x, y, theta]
-current_robot_position = initial_robot_position
+# initial_robot_position = [249., 250., 1.25*np.pi]    # [x, y, theta]
+# current_robot_position = initial_robot_position
 robot_velocity = 0.0
 robot_omega = 0.0
 robot_x_velo = 0.0
@@ -44,7 +44,7 @@ see_obstacle = 0
 
 temp_target = [0., 0., 0.]
 target = [0., 0., 0.]
-state_arr = np.zeros((2, 3))
+state_arr = np.zeros((2, 3))  # robot state
 diff_arr = [0., 0., 0.]
 controller_index = 0
 
@@ -58,15 +58,15 @@ iteration_since_see = 0              # number of iteration since robot saw obsta
 
 last_callback_time = None
 
-# RRT* parameters
-start = (0., 0.)
-goal = (0., 0.)
-obstacle_list = []  # Format: (x, y, radius), the position after robot see it
-x_limit = (0., size)    # need the size of the map
-y_limit = (0., size)    # need the size of the map
-step_size = 5.0
-max_iterations = 5000
-# RRT* parameters
+# # RRT* parameters
+# start = (0., 0.)
+# goal = (0., 0.)
+# obstacle_list = []  # Format: (x, y, radius), the position after robot see it
+# x_limit = (0., size)    # need the size of the map
+# y_limit = (0., size)    # need the size of the map
+# step_size = 5.0
+# max_iterations = 5000
+# # RRT* parameters
 
 class odom_data_subscriber(Node):
 
@@ -98,11 +98,17 @@ class odom_data_subscriber(Node):
         #     )
 
     def odom_callback(self, msg):
-        global iteration, state_arr, diff_arr, target, robot_velocity, robot_omega, obstacle_state_arr, nearby, see_obstacle, controller_index
+        global iteration, state_arr, diff_arr, target, robot_velocity, robot_omega
+        global obstacle_state_arr, nearby, see_obstacle, controller_index, dodge
+
+        # store the old data
+        for i in range(3):
+            state_arr[1][i] = state_arr[0][i]  
+            #  old one         #  new one
 
         # check if robot near obstacle, if true:
-        if np.sqrt((current_obstacle_position[0]-current_robot_position[0])**2+
-               (current_obstacle_position[1]-current_robot_position[1])**2
+        if np.sqrt((current_obstacle_position[0]-state_arr[0][0])**2+
+               (current_obstacle_position[1]-state_arr[0][1])**2
                ) <= obstacle_radius+robot_radius+safety_margin and dodge == 0:
             print("iteration:", iteration+1, "obstacle nearby!!")
             print('RRT* Path Planning...')
@@ -115,11 +121,6 @@ class odom_data_subscriber(Node):
 
         else:
             # The control to final distination
-            # store the old data
-            for i in range(3):
-                state_arr[1][i] = state_arr[0][i]  
-                #  old one           new one
-
             # recording data from /odom as new data
             state_arr[0][0] = msg.pose.pose.position.x
             state_arr[0][1] = msg.pose.pose.position.y
@@ -137,6 +138,30 @@ class odom_data_subscriber(Node):
             #### new controller
             robot_velocity, robot_omega = ctr.controller(diff_x=diff_arr[0][0], diff_y=diff_arr[0][1], diff_theta=diff_arr[0][2],
                                                             iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega)
+            # escape the callback function
+            return
+        
+        if dodge:
+            if iteration_since_see%5 == 0:
+                # set RRT* starting point and goal
+                rrtSetting.start = (state_arr[0][0], state_arr[0][1])
+                rrtSetting.goal = (target[0], target[1])
+                # RRT*
+                path = rrtstar.do_RRTstar(start=rrtSetting.start,
+                                          goal=rrtSetting.goal,
+                                          obstacle_list=rrtSetting.obstacle_list,
+                                          x_limit=rrtSetting.x_limit,
+                                          y_limit=rrtSetting.y_limit,
+                                          step_size=rrtSetting.step_size,
+                                          max_iterations=rrtSetting.max_iterations,
+                                          current_robot_position=state_arr
+                                          )
+                
+                # Create Bezier Curve
+                
+
+                # path = rrtstar.do_RRTstar(start=start, goal=goal, obstacle_list= ,)
+
 
         print("state: ", state_arr[0])
         print()
@@ -174,20 +199,6 @@ class odom_data_subscriber(Node):
             msg.angular.z = float(0.05)
             self.publisher_.publish(msg)
             time.sleep(0.3)
-
-    def do_RRTstar():
-        global start, goal, obstacle_list, x_limit, y_limit, step_size, max_iterations
-        rrt_star = rrtstar.RRTStar(start, goal, obstacle_list, x_limit, y_limit, step_size, max_iterations)
-        path = rrt_star.find_path()
-        if path is not None:
-            print("Path found!")
-            print(path)
-            print("The robot orientation: ", current_robot_position[2])
-            rrt_star.plot(path)
-            return path
-        else:
-            print("Path not found.")
-            return None
 
 def main(args=None):
     global target, state_arr, diff_arr
