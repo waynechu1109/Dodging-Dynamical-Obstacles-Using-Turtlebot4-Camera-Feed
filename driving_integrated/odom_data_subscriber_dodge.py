@@ -121,26 +121,28 @@ class odom_data_subscriber(Node):
         for j in range(3):
             diff_arr[0][j] = state_arr[0][j] - target[0][j]
 
+        #### new controller
+        robot_velocity, robot_omega = ctr.controller(diff_x=diff_arr[0][0], diff_y=diff_arr[0][1], diff_theta=diff_arr[0][2],
+                                                        iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega)
+        ######## old controller
+        # z1 = diff_arr[0][2]
+        # z2 = diff_arr[0][0]*np.cos(diff_arr[0][2]) + diff_arr[0][1]*np.sin(diff_arr[0][2])
+        # z3 = diff_arr[0][0]*np.sin(diff_arr[0][2]) - diff_arr[0][1]*np.cos(diff_arr[0][2])
 
-        ########controller
-        z1 = diff_arr[0][2]
-        z2 = diff_arr[0][0]*np.cos(diff_arr[0][2]) + diff_arr[0][1]*np.sin(diff_arr[0][2])
-        z3 = diff_arr[0][0]*np.sin(diff_arr[0][2]) - diff_arr[0][1]*np.cos(diff_arr[0][2])
+        # x1 = z1
+        # x2 = z2
+        # x3 = -2*z3+z1*z2
 
-        x1 = z1
-        x2 = z2
-        x3 = -2*z3+z1*z2
+        # u1 = -k1*x1 + ((k2*x3)/(x1**2+x2**2))*x2
+        # u2 = -k1*x2 - ((k2*x3)/(x1**2+x2**2))*x1
 
-        u1 = -k1*x1 + ((k2*x3)/(x1**2+x2**2))*x2
-        u2 = -k1*x2 - ((k2*x3)/(x1**2+x2**2))*x1
-
-        robot_omega = u1
-        # get start from zero velocity
-        if iteration <= 50:
-            robot_velocity = ((iteration+5)/(50+5))*(u2 + z3*u1)
-        else:
-            robot_velocity = 1*(u2 + z3*u1)   # the linear velocoty of the robot
-        #######controller
+        # robot_omega = u1
+        # # get start from zero velocity
+        # if iteration <= 50:
+        #     robot_velocity = ((iteration+5)/(50+5))*(u2 + z3*u1)
+        # else:
+        #     robot_velocity = 1*(u2 + z3*u1)   # the linear velocoty of the robot
+        ####### old controller
 
         print("state: ", state_arr[0])
         print()
@@ -153,9 +155,9 @@ class odom_data_subscriber(Node):
         # keep publishing the data to cmd_velocity to drive the robot
         while rclpy.ok():
             # print("now sending driving command")
-            global robot_x_velo, robot_y_velo, robot_velocity, diff_arr, robot_omega
             # robot_x_velo = robot_velocity*np.cos(diff_arr[0][2])
             # robot_y_velo = robot_velocity*np.sin(diff_arr[0][2])
+            global robot_velocity, robot_omega
             msg = Twist()
 
             if robot_velocity >= 0:

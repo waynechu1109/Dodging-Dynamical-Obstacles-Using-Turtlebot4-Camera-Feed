@@ -40,4 +40,5 @@ def controller(diff_x, diff_y, diff_theta, iteration, initial_velocity, initial_
     robot_omega = omega
     robot_x_velo = -robot_velocity* np.cos(current_robot_position[2])      # the negative sign should be modified
     robot_y_velo = -robot_velocity* np.sin(current_robot_position[2])      # the negative sign should be modified
-    return 1
+    
+    return robot_velocity, robot_omega
