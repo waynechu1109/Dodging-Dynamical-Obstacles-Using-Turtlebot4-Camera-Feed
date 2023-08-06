@@ -106,7 +106,7 @@ class odom_data_subscriber(Node):
             state_arr[1][i] = state_arr[0][i]  
             #  old one           new one
 
-        # record the data
+        # recording data from /odom as new data
         state_arr[0][0] = msg.pose.pose.position.x
         state_arr[0][1] = msg.pose.pose.position.y
         quaternion = (msg.pose.pose.orientation.x,
@@ -120,29 +120,9 @@ class odom_data_subscriber(Node):
         # calculate the difference
         for j in range(3):
             diff_arr[0][j] = state_arr[0][j] - target[0][j]
-
         #### new controller
         robot_velocity, robot_omega = ctr.controller(diff_x=diff_arr[0][0], diff_y=diff_arr[0][1], diff_theta=diff_arr[0][2],
                                                         iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega)
-        ######## old controller
-        # z1 = diff_arr[0][2]
-        # z2 = diff_arr[0][0]*np.cos(diff_arr[0][2]) + diff_arr[0][1]*np.sin(diff_arr[0][2])
-        # z3 = diff_arr[0][0]*np.sin(diff_arr[0][2]) - diff_arr[0][1]*np.cos(diff_arr[0][2])
-
-        # x1 = z1
-        # x2 = z2
-        # x3 = -2*z3+z1*z2
-
-        # u1 = -k1*x1 + ((k2*x3)/(x1**2+x2**2))*x2
-        # u2 = -k1*x2 - ((k2*x3)/(x1**2+x2**2))*x1
-
-        # robot_omega = u1
-        # # get start from zero velocity
-        # if iteration <= 50:
-        #     robot_velocity = ((iteration+5)/(50+5))*(u2 + z3*u1)
-        # else:
-        #     robot_velocity = 1*(u2 + z3*u1)   # the linear velocoty of the robot
-        ####### old controller
 
         print("state: ", state_arr[0])
         print()
@@ -180,6 +160,22 @@ class odom_data_subscriber(Node):
             msg.angular.z = float(0.05)
             self.publisher_.publish(msg)
             time.sleep(0.3)
+
+    def do_RRTstar():
+        global start, goal, obstacle_list, x_limit, y_limit, step_size, max_iterations
+        rrt_star = rrtstar.RRTStar(start, goal, obstacle_list, x_limit, y_limit, step_size, max_iterations)
+        path = rrt_star.find_path()
+        if path is not None:
+            print("Path found!")
+            print(path)
+            print("The robot orientation: ", current_robot_position[2])
+            # x_sp, y_sp = rrt_star.bspline_interpolation(path)  # Get the B-spline interpolated curve
+            # plt.plot(x_sp, y_sp[1], color='purple')  # Plot the B-spline curve
+            rrt_star.plot(path)
+            return path
+        else:
+            print("Path not found.")
+            return None
 
 def main(args=None):
     global target, state_arr, diff_arr
