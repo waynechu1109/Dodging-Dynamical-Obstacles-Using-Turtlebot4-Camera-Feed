@@ -8,11 +8,13 @@ import asyncio
 import time
 from geometry_msgs.msg import Quaternion
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Float64MultiArray
 from scipy.spatial.transform import Rotation as R
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 callback_counter = 1
 transform_matrix = [[], [], [], [], [], []]
+full_matrix = np.array([])
 
 class TFListenerNode(Node):
 
@@ -41,95 +43,113 @@ class TFListenerNode(Node):
             self.do_odom_transform_callback,
             qos_profile)
         
-        # Subscribe to the /tf topic to get transformation related to tf
+        # Subscribe to the /obstacle_info topic to get coord of obstacle in camera frame
+        self.tf_subscriber = self.create_subscription(
+            Float64MultiArray,
+            '/obstacle_info',
+            self.get_obstacke_info_callback,
+            10)
 
+    def get_obstacke_info_callback(self, msg):
+        global full_matrix
+        camera_matrix = np.array([[msg.data[0]],
+                                  [msg.data[1]], 
+                                  [msg.data[2]], 
+                                  [1]])
+        print('data get from obstacle_info topic:', camera_matrix)
+        # print('full matrix:', full_matrix)
+
+        # wait for full_matrix be assigned some values
+        if np.size(full_matrix) != 0:
+            odom_matrix = np.matmul(full_matrix, camera_matrix)
+            print('coord in odom:\n', odom_matrix)
+            print()
 
     def do_odom_transform_callback(self, msg):
-        global callback_counter, transform_matrix
+        global callback_counter, transform_matrix, full_matrix
         # Process the TF data here
         # You can access the transformations using msg.transforms
 
-        print('callbackcounter:', callback_counter)
+        # print('callbackcounter:', callback_counter)
         if callback_counter == 1:
             # get all static transform matrices (only do it at first callback)
             transform_matrix[4], transform_matrix[3], transform_matrix[2], transform_matrix[1], transform_matrix[0] = self.do_static_transform()
 
-        # Wait for 2 seconds to give tf_buffer some time to fill up
-        self.get_logger().info("Received TF data. Waiting for 2 seconds to process.")
-        time.sleep(2.0)
+        # # Wait for 2 seconds to give tf_buffer some time to fill up
+        # self.get_logger().info("Received TF data. Waiting for 2 seconds to process.")
+        # time.sleep(2.0)
 
-        print('source: odom')
-        print('child: base_link')
+        # print('source: odom')
+        # print('child: base_link')
 
         # 5
         translation = msg.pose.pose.position
         rotation = msg.pose.pose.orientation
         transform_matrix[5] = self.odom_get_transform_matrix(translation, rotation)
-        print(transform_matrix[5])
-        print()
+        # print(transform_matrix[5])
+        # print()
 
         # get full transform matrix here
         full_matrix = self.get_full_transform_matrix(transform_matrix[5], transform_matrix[4], 
                                                      transform_matrix[3], transform_matrix[2], 
                                                      transform_matrix[1], transform_matrix[0])
         
-        print('full matrix:')
-        print(full_matrix)
-        print()
+        # print('full matrix:')
+        # print(full_matrix)
+        # print()
         
         callback_counter += 1
 
-
     def do_static_transform(self):
-        print('now do static transform...')
+        # print('now do static transform...')
 
         # 4
         translation = self.base_link__shell_link[0]
         rotation = self.base_link__shell_link[1]
         transform_matrix_4 = self.static_get_transform_matrix(translation, rotation)
-        print('base_link => shell_link')
-        print(transform_matrix_4)
+        # print('base_link => shell_link')
+        # print(transform_matrix_4)
 
         # 3
         translation = self.shell_link__oakd_camera_bracket[0]
         rotation = self.shell_link__oakd_camera_bracket[1]
         transform_matrix_3 = self.static_get_transform_matrix(translation, rotation)
-        print('shell_link => oakd_camera_bracket')
-        print(transform_matrix_3)
+        # print('shell_link => oakd_camera_bracket')
+        # print(transform_matrix_3)
 
         # 2
         translation = self.oakd_camera_bracket__oakd_link[0]
         rotation = self.oakd_camera_bracket__oakd_link[1]
         transform_matrix_2 = self.static_get_transform_matrix(translation, rotation)
-        print('oakd_camera_bracket => oakd_link')
-        print(transform_matrix_2)
+        # print('oakd_camera_bracket => oakd_link')
+        # print(transform_matrix_2)
 
         # 1
         translation = self.oakd_link__oakd_rgb_camera_frame[0]
         rotation = self.oakd_link__oakd_rgb_camera_frame[1]
         transform_matrix_1 = self.static_get_transform_matrix(translation, rotation)
-        print('oakd_link => oakd_rgb_camera_frame')
-        print(transform_matrix_1)
+        # print('oakd_link => oakd_rgb_camera_frame')
+        # print(transform_matrix_1)
 
         # 0
         translation = self.oakd_rgb_camera_frame__oakd_rgb_camera_optical_frame[0]
         rotation = self.oakd_rgb_camera_frame__oakd_rgb_camera_optical_frame[1]
         transform_matrix_0 = self.static_get_transform_matrix(translation, rotation)
-        print('oakd_rgb_camera_frame => oakd_rgb_camera_optical_frame')
-        print(transform_matrix_0)
+        # print('oakd_rgb_camera_frame => oakd_rgb_camera_optical_frame')
+        # print(transform_matrix_0)
 
         print()
         return transform_matrix_4, transform_matrix_3, transform_matrix_2, transform_matrix_1, transform_matrix_0
 
     def odom_get_transform_matrix(self, translation ,rotation):
-        print('translation x:', translation.x)
-        print('translation y:', translation.y)
-        print('translation z:', translation.z)
+        # print('translation x:', translation.x)
+        # print('translation y:', translation.y)
+        # print('translation z:', translation.z)
 
-        print('rotation x:', rotation.x)
-        print('rotation y:', rotation.y)
-        print('rotation z:', rotation.z)
-        print('rotation w:', rotation.w)
+        # print('rotation x:', rotation.x)
+        # print('rotation y:', rotation.y)
+        # print('rotation z:', rotation.z)
+        # print('rotation w:', rotation.w)
 
         # convert rotation data into matrix
         r = R.from_quat([rotation.x, rotation.y, 
@@ -151,14 +171,14 @@ class TFListenerNode(Node):
         return transform_matrix
     
     def static_get_transform_matrix(self, translation, rotation):
-        print('translation x:', translation[0])
-        print('translation y:', translation[1])
-        print('translation z:', translation[2])
+        # print('translation x:', translation[0])
+        # print('translation y:', translation[1])
+        # print('translation z:', translation[2])
 
-        print('rotation x:', rotation[0])
-        print('rotation y:', rotation[1])
-        print('rotation z:', rotation[2])
-        print('rotation w:', rotation[3])
+        # print('rotation x:', rotation[0])
+        # print('rotation y:', rotation[1])
+        # print('rotation z:', rotation[2])
+        # print('rotation w:', rotation[3])
 
         # convert rotation data into matrix
         r = R.from_quat([rotation[0], rotation[1], 
@@ -194,7 +214,6 @@ def main(args=None):
     tf_listener_node.destroy_node()
     rclpy.shutdown()
 
-if __name__ == '__main__':
-    main()
-
+# if __name__ == '__main__':
+#     main()
 

@@ -97,9 +97,11 @@ class camera_data_reader(Node):
             and pos_arr[0][1] is not None
             and pos_arr[2][0] is not None
             and pos_arr[2][1] is not None):
-            msg.data = [pos_arr[0][0], 0., pos_arr[2][0]]   # don't care about y now
-            self.publisher_.publish(msg)
+            msg.data = [pos_arr[0][0], pos_arr[1][0], pos_arr[2][0]]
             # self.get_logger().info('Publishing: "%f"' % msg.data)
+        else:
+            msg.data = [1e6, 1e6, 1e6]   # publish large number to indicate "None"
+        self.publisher_.publish(msg)
 
     def get_velo(self, elapsed_time):
         x_velo = (pos_arr[0][0] - pos_arr[0][1])/elapsed_time
@@ -123,4 +125,5 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
 

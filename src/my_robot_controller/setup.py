@@ -25,6 +25,7 @@ setup(
             "test_subscriber = my_robot_controller.test_subscriber:main",
             "test_driver = my_robot_controller.test_driver:main",
             "odom_data_subscriber = my_robot_controller.odom_data_subscriber:main",
+            "odom_data_subscriber_dodge = my_robot_controller.odom_data_subscriber_dodge:main",
             "camera_simulator = my_robot_controller.camera_pub_sim:main",
             "camera_data_reader = my_robot_controller.camera_data_reader:main",
             "transformation_test = my_robot_controller.transformation_test:main",
