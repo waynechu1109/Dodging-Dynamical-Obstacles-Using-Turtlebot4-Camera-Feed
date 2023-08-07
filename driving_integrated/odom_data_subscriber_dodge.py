@@ -179,9 +179,13 @@ class odom_data_subscriber(Node):
         # if the robot is close enough to distination
         if np.sqrt((state_arr[0][0]-target[0])**2 + 
                (state_arr[0][1]-target[1])**2) < 100.: #or smooth_data_index > len(smooth_data):
+            dodge = 0
+            for j in range(3):
+                diff_arr[0][j] = state_arr[0][j] - target[0][j]
+            #### new controller
+            robot_velocity, robot_omega = ctr.controller(diff_x=diff_arr[0][0], diff_y=diff_arr[0][1], diff_theta=diff_arr[0][2],
+                                                            iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega)
             
-            pass
-
         print("state: ", state_arr[0])
         print()
 
