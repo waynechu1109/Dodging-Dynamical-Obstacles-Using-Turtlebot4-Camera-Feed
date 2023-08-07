@@ -197,7 +197,7 @@ class odom_data_subscriber(Node):
     # publish "turn around" to cmd_velocity, "turning_index" indicate the type of turn
     # turning_index 1 => turn around
     #               2 => orientation adjustment
-    def turn(self, msg, turning_index):
+    def turn(self, msg, turning_index, diff):
         global state_arr
         old_angle = state_arr[0][2]
         # print("old angle: ", old_angle)
@@ -210,7 +210,19 @@ class odom_data_subscriber(Node):
                 time.sleep(0.3)
             return
         elif turning_index == 2:
-            pass
+            if diff_arr[2] > np.pi/6:
+                while (abs(state_arr[0][2] - old_angle) > np.pi/6):
+                    msg.linear.x = float(0)
+                    msg.angular.z = float(-0.05)   # clockwise
+                    self.publisher_.publish(msg)
+                    time.sleep(0.3)
+            elif diff_arr[2] < np.pi/6:
+                while (abs(state_arr[0][2] - old_angle) > np.pi/6):
+                    msg.linear.x = float(0)
+                    msg.angular.z = float(0.05)   # counter-clockwise
+                    self.publisher_.publish(msg)
+                    time.sleep(0.3)
+
 
 def main(args=None):
     global target, state_arr, diff_arr
