@@ -15,7 +15,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 # import other function file
 import controller as ctr
-import create_BezierCurve
+import create_BezierCurve as bcurve
 import calculate_slope
 import RRT_star as rrtSetting
 import do_RRTstar as rrtstar
@@ -158,7 +158,15 @@ class odom_data_subscriber(Node):
                                           )
                 
                 # Create Bezier Curve
-                
+                smooth_data, smooth_theta, x_smooth_reversed, y_smooth_reversed = bcurve.create_BezierCurve(path)
+                controller_index = 0
+                smooth_data_index = 150      # record which point is temporary target
+                smooth_data_increase = smooth_data_index
+
+                # get the difference
+                for j in range(2):
+                    diff_arr[j] = state_arr[0][j] - smooth_data[smooth_data_index][j]
+                diff_arr[2] = state_arr[0][2] - smooth_theta[smooth_data_index]
 
                 # path = rrtstar.do_RRTstar(start=start, goal=goal, obstacle_list= ,)
 
@@ -173,9 +181,6 @@ class odom_data_subscriber(Node):
     def drive(self):
         # keep publishing the data to cmd_velocity to drive the robot
         while rclpy.ok():
-            # print("now sending driving command")
-            # robot_x_velo = robot_velocity*np.cos(diff_arr[0][2])
-            # robot_y_velo = robot_velocity*np.sin(diff_arr[0][2])
             global robot_velocity, robot_omega
             msg = Twist()
 
@@ -187,18 +192,25 @@ class odom_data_subscriber(Node):
                 self.publisher_.publish(msg)
                 time.sleep(0.3)
             else:
-                self.turn_around(msg)
+                self.turn(msg, turning_index=1)
 
-    def turn_around(self, msg):
+    # publish "turn around" to cmd_velocity, "turning_index" indicate the type of turn
+    # turning_index 1 => turn around
+    #               2 => orientation adjustment
+    def turn(self, msg, turning_index):
         global state_arr
         old_angle = state_arr[0][2]
         # print("old angle: ", old_angle)
-        while np.abs(state_arr[0][2] - old_angle) < 1.5 or np.abs(state_arr[0][2] - old_angle) > 1.7:
-            # print("diff.: ", np.abs(state_arr[0][2] - old_angle))
-            msg.linear.x = float(0)
-            msg.angular.z = float(0.05)
-            self.publisher_.publish(msg)
-            time.sleep(0.3)
+        if turning_index == 1:
+            while np.abs(state_arr[0][2] - old_angle) < 1.5 or np.abs(state_arr[0][2] - old_angle) > 1.7:
+                # print("diff.: ", np.abs(state_arr[0][2] - old_angle))
+                msg.linear.x = float(0)
+                msg.angular.z = float(0.05)
+                self.publisher_.publish(msg)
+                time.sleep(0.3)
+            return
+        elif turning_index == 2:
+            pass
 
 def main(args=None):
     global target, state_arr, diff_arr
