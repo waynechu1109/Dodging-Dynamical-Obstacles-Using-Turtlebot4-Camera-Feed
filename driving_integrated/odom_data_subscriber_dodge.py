@@ -106,6 +106,17 @@ class odom_data_subscriber(Node):
             state_arr[1][i] = state_arr[0][i]  
             #  old one         #  new one
 
+        # recording data from /odom as new data
+        state_arr[0][0] = msg.pose.pose.position.x
+        state_arr[0][1] = msg.pose.pose.position.y
+        quaternion = (msg.pose.pose.orientation.x,
+                    msg.pose.pose.orientation.y,
+                    msg.pose.pose.orientation.z,
+                    msg.pose.pose.orientation.w
+                    )
+        euler_angles = euler.quat2euler(quaternion, 'sxyz')
+        state_arr[0][2] = euler_angles[0]  # get the "yaw" data
+
         # check if robot near obstacle, if true:
         if np.sqrt((current_obstacle_position[0]-state_arr[0][0])**2+
                (current_obstacle_position[1]-state_arr[0][1])**2
@@ -121,17 +132,6 @@ class odom_data_subscriber(Node):
 
         else:
             # The control to final distination
-            # recording data from /odom as new data
-            state_arr[0][0] = msg.pose.pose.position.x
-            state_arr[0][1] = msg.pose.pose.position.y
-            quaternion = (msg.pose.pose.orientation.x,
-                        msg.pose.pose.orientation.y,
-                        msg.pose.pose.orientation.z,
-                        msg.pose.pose.orientation.w
-                        )
-            euler_angles = euler.quat2euler(quaternion, 'sxyz')
-            state_arr[0][2] = euler_angles[0]  # get the "yaw" data
-
             # calculate the difference to final distination
             for j in range(3):
                 diff_arr[0][j] = state_arr[0][j] - target[0][j]
@@ -149,7 +149,7 @@ class odom_data_subscriber(Node):
                 # RRT*
                 path = rrtstar.do_RRTstar(start=rrtSetting.start,
                                           goal=rrtSetting.goal,
-                                          obstacle_list=rrtSetting.obstacle_list,
+                                          obstacle_list=rrtSetting.obstacle_list,    # obstacle list need the data from camera
                                           x_limit=rrtSetting.x_limit,
                                           y_limit=rrtSetting.y_limit,
                                           step_size=rrtSetting.step_size,
@@ -168,8 +168,19 @@ class odom_data_subscriber(Node):
                     diff_arr[j] = state_arr[0][j] - smooth_data[smooth_data_index][j]
                 diff_arr[2] = state_arr[0][2] - smooth_theta[smooth_data_index]
 
-                # path = rrtstar.do_RRTstar(start=start, goal=goal, obstacle_list= ,)
+                # orientation adjustment if needed
+                if np.abs(diff_arr[2]) > np.pi/6:
+                    self.turn(turning_index=2)
 
+                #### new controller
+                robot_velocity, robot_omega = ctr.controller(diff_x=diff_arr[0][0], diff_y=diff_arr[0][1], diff_theta=diff_arr[0][2],
+                                                            iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega)
+                    
+        # if the robot is close enough to distination
+        if np.sqrt((state_arr[0][0]-target[0])**2 + 
+               (state_arr[0][1]-target[1])**2) < 100.: #or smooth_data_index > len(smooth_data):
+            
+            pass
 
         print("state: ", state_arr[0])
         print()
@@ -181,7 +192,7 @@ class odom_data_subscriber(Node):
     def drive(self):
         # keep publishing the data to cmd_velocity to drive the robot
         while rclpy.ok():
-            global robot_velocity, robot_omega
+            global robot_velocity, robot_omega, diff_arr
             msg = Twist()
 
             if robot_velocity >= 0:
@@ -194,11 +205,11 @@ class odom_data_subscriber(Node):
             else:
                 self.turn(msg, turning_index=1)
 
-    # publish "turn around" to cmd_velocity, "turning_index" indicate the type of turn
-    # turning_index 1 => turn around
-    #               2 => orientation adjustment
-    def turn(self, msg, turning_index, diff):
-        global state_arr
+    def turn(self, msg=Twist(), turning_index=1):
+        # publish "turn around" to cmd_velocity, "turning_index" indicate the type of turn
+        # turning_index 1 => turn around
+        #               2 => orientation adjustment
+        global state_arr, diff_arr
         old_angle = state_arr[0][2]
         # print("old angle: ", old_angle)
         if turning_index == 1:
@@ -211,13 +222,13 @@ class odom_data_subscriber(Node):
             return
         elif turning_index == 2:
             if diff_arr[2] > np.pi/6:
-                while (abs(state_arr[0][2] - old_angle) > np.pi/6):
+                while (np.abs(state_arr[0][2] - old_angle) > np.pi/6):
                     msg.linear.x = float(0)
                     msg.angular.z = float(-0.05)   # clockwise
                     self.publisher_.publish(msg)
                     time.sleep(0.3)
             elif diff_arr[2] < np.pi/6:
-                while (abs(state_arr[0][2] - old_angle) > np.pi/6):
+                while (np.abs(state_arr[0][2] - old_angle) > np.pi/6):
                     msg.linear.x = float(0)
                     msg.angular.z = float(0.05)   # counter-clockwise
                     self.publisher_.publish(msg)
