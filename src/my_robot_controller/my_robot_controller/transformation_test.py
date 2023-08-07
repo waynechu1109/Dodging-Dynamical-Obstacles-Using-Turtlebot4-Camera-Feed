@@ -12,9 +12,12 @@ from std_msgs.msg import Float64MultiArray
 from scipy.spatial.transform import Rotation as R
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
+np.set_printoptions(suppress=True, floatmode='fixed')
+
 callback_counter = 1
 transform_matrix = [[], [], [], [], [], []]
 full_matrix = np.array([])
+odom_matrix = np.array([])
 
 class TFListenerNode(Node):
 
@@ -49,14 +52,34 @@ class TFListenerNode(Node):
             '/obstacle_info',
             self.get_obstacke_info_callback,
             10)
+        
+        # publisher for odom_obstacle_info
+        self.publisher_ = self.create_publisher(
+            Float64MultiArray,
+            '/odom_obstacle_info',
+            10)
+        timer_period = 0.3 # sec
+        self.timer = self.create_timer(timer_period, self.odom_publisher_callback)
+
+    def odom_publisher_callback(self):
+        global odom_matrix
+        msg = Float64MultiArray()
+        # if np.size(odom_matrix) != 0:
+        #     print('odom_matrix[0]=', odom_matrix[0][0])
+        if np.size(odom_matrix) != 0:
+            msg.data = [odom_matrix[0][0], odom_matrix[1][0], odom_matrix[2][0]]
+            self.publisher_.publish(msg)
+        else:
+            msg.data = [1e6, 1e6, 1e6]   # use large numbner to indicate "None"
+            self.publisher_.publish(msg)
 
     def get_obstacke_info_callback(self, msg):
-        global full_matrix
+        global full_matrix, odom_matrix
         camera_matrix = np.array([[msg.data[0]],
                                   [msg.data[1]], 
                                   [msg.data[2]], 
                                   [1]])
-        print('data get from obstacle_info topic:', camera_matrix)
+        # print('data get from obstacle_info topic:', camera_matrix)
         # print('full matrix:', full_matrix)
 
         # wait for full_matrix be assigned some values
@@ -202,7 +225,8 @@ class TFListenerNode(Node):
     def get_full_transform_matrix(self, transform_matrix_5, transform_matrix_4, transform_matrix_3, 
                                   transform_matrix_2, transform_matrix_1, transform_matrix_0):
         _543_matrix = np.matmul(np.matmul(transform_matrix_5,transform_matrix_4), transform_matrix_3)
-        _210_matrix = np.matmul(np.matmul(transform_matrix_2,transform_matrix_1), transform_matrix_0)
+        # _210_matrix = np.matmul(np.matmul(transform_matrix_2,transform_matrix_1), transform_matrix_0)
+        _210_matrix = np.matmul(transform_matrix_2,transform_matrix_1)
         full_matrix = np.matmul(_543_matrix, _210_matrix)
         return full_matrix
 
