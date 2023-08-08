@@ -69,7 +69,7 @@ class odom_data_subscriber(Node):
 
         # publisher for cmd_vel
         self.publisher_ = self.create_publisher(Twist, '/arches/cmd_vel', 10)
-        self.get_logger().info("start!@@@!")
+        self.get_logger().info("start!@!@!@!")
 
         qos_profile = QoSProfile(
             depth = 10,
@@ -92,12 +92,14 @@ class odom_data_subscriber(Node):
         )
 
     def odom_obstacle_info_callback(self, msg):
-        global security_width, obstacle_temp_list, last_callback_time, dodge, iteration_since_see
+        global security_width, obstacle_temp_list, last_callback_time, dodge, iteration_since_see, current_obstacle_position
         elapsed_time = 0                    # for getting time duration between each callback
         callback_start_time = time.time() 
         if last_callback_time is not None:
             elapsed_time = callback_start_time - last_callback_time
         last_callback_time = callback_start_time
+
+        current_obstacle_position = [msg.data[0], msg.data[1], 0.]            # the last element should be orientation !!!
 
         # store the old data
         for i in range(3):
@@ -108,10 +110,14 @@ class odom_data_subscriber(Node):
         for j in range(3):
             obstacle_temp_list[0][j] = msg.data[j]
 
+        # if camera see "None", don't dodge
+        if np.abs(msg.data[0]) > 1e5 and np.abs(msg.data[1]) > 1e5 and np.abs(msg.data[2]) > 1e5:
+            dodge = 0
+
         # predict obstacle trajectory only if robot starts dodging and at particular # of iteration
         if dodge and iteration_since_see%5 == 0:
             rrts.RRTStar.obstacle_list = []   # clear the list every callback
-            current_obstacle_position = [msg.data[0], msg.data[1], 0.] # the last element is orientation
+            # current_obstacle_position = [msg.data[0], msg.data[1], 0.]            # the last element should be orientation !!!
             # print('data from odom_obstacle_info', current_obstacle_position)
             rrts.RRTStar.obstacle_list.append([current_obstacle_position[0],
                                     current_obstacle_position[1],
@@ -135,7 +141,7 @@ class odom_data_subscriber(Node):
     def odom_callback(self, msg):
         global iteration, state_arr, diff_arr, target, robot_velocity, robot_omega
         global obstacle_state_arr, nearby, see_obstacle, controller_index, dodge
-        global iteration_since_see
+        global iteration_since_see, current_obstacle_position
 
         # store the old data
         for i in range(3):
@@ -153,10 +159,17 @@ class odom_data_subscriber(Node):
         euler_angles = euler.quat2euler(quaternion, 'sxyz')
         state_arr[0][2] = euler_angles[0]  # get the "yaw" data
 
+        if np.abs(current_obstacle_position[0]) < 1e5:
+            distance_to_obstacle = np.sqrt((current_obstacle_position[0]-state_arr[0][0])**2+(current_obstacle_position[1]-state_arr[0][1])**2)
+            print('current_obstacle_positionp[0]=', current_obstacle_position[0])
+            print('distance to obstacle:', distance_to_obstacle)
+        else:
+            distance_to_obstacle = 1e6   # large number to indicate there is no obstacle in front
+            print('No obstacle in front...')
+
         # check if robot near obstacle, if true:
-        if np.sqrt((current_obstacle_position[0]-state_arr[0][0])**2+
-               (current_obstacle_position[1]-state_arr[0][1])**2
-               ) <= obstacle_radius+robot_radius+safety_margin and dodge == 0:
+        if ((distance_to_obstacle <= obstacle_radius+robot_radius+safety_margin) and dodge == 0 and 
+            np.abs(current_obstacle_position[0]) < 1e5 and current_obstacle_position[0] != 0):
             print("iteration:", iteration+1, "obstacle nearby!!")
             print('RRT* Path Planning...')
             nearby = 1
@@ -165,7 +178,6 @@ class odom_data_subscriber(Node):
             dodge = 1
             robot_velocity = 0
             robot_omega = 0
-
         else:
             # The control to final distination
             # calculate the difference to final distination
@@ -230,7 +242,7 @@ class odom_data_subscriber(Node):
         print()
 
         # count iteration only if the robot starts moving
-        if np.abs(state_arr[1][0] - state_arr[0][0]) > 0.001 or np.abs(state_arr[1][1] - state_arr[0][1]) > 0.001:
+        if np.abs(state_arr[1][0] - state_arr[0][0]) > 0.01 or np.abs(state_arr[1][1] - state_arr[0][1]) > 0.01:
             iteration += 1
 
     def drive(self):
@@ -240,9 +252,9 @@ class odom_data_subscriber(Node):
             msg = Twist()
 
             if robot_velocity >= 0:
-                msg.linear.x = robot_velocity
+                msg.linear.x = float(robot_velocity)
                 # msg.linear.y = robot_y_velo
-                msg.angular.z = robot_omega
+                msg.angular.z = float(robot_omega)
                 # print("published: ", msg.linear.x, msg.angular.z)
                 self.publisher_.publish(msg)
                 time.sleep(0.3)

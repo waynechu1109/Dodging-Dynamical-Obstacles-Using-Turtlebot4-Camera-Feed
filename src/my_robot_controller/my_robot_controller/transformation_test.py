@@ -69,9 +69,9 @@ class TFListenerNode(Node):
         if np.size(odom_matrix) != 0:
             msg.data = [odom_matrix[0][0], odom_matrix[1][0], odom_matrix[2][0]]
             self.publisher_.publish(msg)
-        else:
-            msg.data = [1e6, 1e6, 1e6]   # use large numbner to indicate "None"
-            self.publisher_.publish(msg)
+        # else:
+        #     msg.data = [1e6, 1e6, 1e6]   # use large numbner to indicate "None"
+        #     self.publisher_.publish(msg)
 
     def get_obstacke_info_callback(self, msg):
         global full_matrix, odom_matrix
@@ -84,7 +84,7 @@ class TFListenerNode(Node):
 
         # wait for full_matrix be assigned some values
         if np.size(full_matrix) != 0:
-            odom_matrix = np.matmul(full_matrix, camera_matrix)
+            odom_matrix = np.matmul(full_matrix, camera_matrix) # if "None", camera matrix will be very large
             print('coord in odom:\n', odom_matrix)
             print()
 
