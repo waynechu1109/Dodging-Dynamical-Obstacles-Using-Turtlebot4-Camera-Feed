@@ -55,7 +55,7 @@ safety_margin = 10*robot_radius
 dodge = 0
 nearby = 0
 
-iteration = 0                        # record the index
+iteration = 1                        # record the index
 iteration_since_see = 0              # number of iteration since robot saw obstacle
 
 security_width = obstacle_radius + robot_radius # the additional width around the obstacle for safety 
@@ -170,7 +170,7 @@ class odom_data_subscriber(Node):
         # check if robot near obstacle, if true:
         if ((distance_to_obstacle <= obstacle_radius+robot_radius+safety_margin) and dodge == 0 and 
             np.abs(current_obstacle_position[0]) < 1e5 and current_obstacle_position[0] != 0):
-            print("iteration:", iteration+1, "obstacle nearby!!")
+            print("iteration:", iteration, "obstacle nearby!!")
             print('RRT* Path Planning...')
             nearby = 1
             see_obstacle = 1
@@ -181,12 +181,16 @@ class odom_data_subscriber(Node):
         else:
             # The control to final distination
             # calculate the difference to final distination
+            # print('now control to the target...')
             for j in range(3):
                 diff_arr[j] = state_arr[0][j] - target[j]
+
+            # print('diff_arr to target:', diff_arr)
             #### new controller
             robot_velocity, robot_omega = ctr.controller(diff_x=diff_arr[0], diff_y=diff_arr[1], diff_theta=diff_arr[2],
                                                             iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega,
                                                             dodge=dodge)
+            print('rbt velo, rbt omega = ', robot_velocity, ',', robot_omega)
             # escape the callback function
             return
         

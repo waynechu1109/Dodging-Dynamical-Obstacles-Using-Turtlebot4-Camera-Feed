@@ -2,6 +2,9 @@ import numpy as np
 
 def controller(diff_x, diff_y, diff_theta, iteration, initial_velocity, initial_omega, dodge):
     # global robot_velocity, robot_omega, current_robot_position, robot_x_velo, robot_y_velo, dodge
+
+    # print('now come in the controller function...')
+
     if dodge:
         k1 = 500e-4
         k2 = (20*k1)
@@ -13,6 +16,8 @@ def controller(diff_x, diff_y, diff_theta, iteration, initial_velocity, initial_
     z2 = diff_x*np.cos(diff_theta) + diff_y*np.sin(diff_theta)
     z3 = diff_x*np.sin(diff_theta) - diff_y*np.cos(diff_theta)
     
+    # print('z1:', z1)
+
     x1 = z1
     x2 = z2
     x3 = -2*z3+z1*z2
@@ -35,6 +40,9 @@ def controller(diff_x, diff_y, diff_theta, iteration, initial_velocity, initial_
         velocity = 5.   
     elif velocity < -5.:
         velocity = -5.
+
+    # print('return velo:', velocity, 'return omega:', omega)
+
     robot_velocity = velocity
     robot_omega = omega
     # robot_x_velo = -robot_velocity* np.cos(state_arr[0][2])      # the negative sign should be modified
