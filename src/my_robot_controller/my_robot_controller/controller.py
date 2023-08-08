@@ -1,7 +1,7 @@
 import numpy as np
 
-def controller(diff_x, diff_y, diff_theta, iteration, initial_velocity, initial_omega):
-    global robot_velocity, robot_omega, current_robot_position, robot_x_velo, robot_y_velo, dodge
+def controller(diff_x, diff_y, diff_theta, iteration, initial_velocity, initial_omega, dodge):
+    # global robot_velocity, robot_omega, current_robot_position, robot_x_velo, robot_y_velo, dodge
     if dodge:
         k1 = 500e-4
         k2 = (20*k1)
@@ -35,10 +35,9 @@ def controller(diff_x, diff_y, diff_theta, iteration, initial_velocity, initial_
         velocity = 5.   
     elif velocity < -5.:
         velocity = -5.
-    # print("velo.:", velocity)
     robot_velocity = velocity
     robot_omega = omega
-    robot_x_velo = -robot_velocity* np.cos(current_robot_position[2])      # the negative sign should be modified
-    robot_y_velo = -robot_velocity* np.sin(current_robot_position[2])      # the negative sign should be modified
+    # robot_x_velo = -robot_velocity* np.cos(state_arr[0][2])      # the negative sign should be modified
+    # robot_y_velo = -robot_velocity* np.sin(state_arr[0][2])      # the negative sign should be modified
     
     return robot_velocity, robot_omega

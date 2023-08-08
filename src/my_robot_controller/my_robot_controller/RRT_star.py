@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 class Node:
     def __init__(self, x, y):
@@ -14,8 +14,8 @@ class RRTStar:
     start = (0., 0.)
     goal = (0., 0.)
     obstacle_list = []  # Format: (x, y, radius), the position after robot see it
-    x_limit = (0., size)    # need the size of the map
-    y_limit = (0., size)    # need the size of the map
+    x_limit = (-1e6, 1e6)    # need the size of the map
+    y_limit = (-1e6, 1e6)    # need the size of the map
     step_size = 5.0
     max_iterations = 5000
     # RRT* parameters
@@ -132,22 +132,38 @@ class RRTStar:
 
         return path[::-1]
 
-    def plot(self, path=None):
-        for obstacle in self.obstacle_list:
-            circle = plt.Circle((obstacle[0], obstacle[1]), obstacle[2], color=plt.cm.Reds(0.5))
-            plt.gca().add_patch(circle)
-        for node in self.node_list:
-            if node.parent is not None:
-                # plt.plot([node.x, node.parent.x], [node.y, node.parent.y], '-', color=plt.cm.Greens(0.1))
-                pass
+    # def plot(self, path=None):
+    #     for obstacle in self.obstacle_list:
+    #         circle = plt.Circle((obstacle[0], obstacle[1]), obstacle[2], color=plt.cm.Reds(0.5))
+    #         plt.gca().add_patch(circle)
+    #     for node in self.node_list:
+    #         if node.parent is not None:
+    #             # plt.plot([node.x, node.parent.x], [node.y, node.parent.y], '-', color=plt.cm.Greens(0.1))
+    #             pass
+    #     if path is not None:
+    #         plt.plot([x for x, y in path], [y for x, y in path], '-b')
+    #     plt.plot(self.start.x, self.start.y, 'ro', markersize=8)
+    #     plt.plot(self.goal.x, self.goal.y, 'bo', markersize=8)
+    #     plt.xlim(self.x_limit)
+    #     plt.ylim(self.y_limit)
+    #     plt.xlabel('X')
+    #     plt.ylabel('Y')
+    #     plt.title('RRT* Path Planning')
+    #     plt.grid(True)
+    #     # plt.show()
+
+    def do_RRTstar(start, goal, obstacle_list, x_limit, y_limit, step_size, max_iterations, current_robot_position):
+        # global start, goal, obstacle_list, x_limit, y_limit, step_size, max_iterations
+        rrt_star = RRTStar(start, goal, obstacle_list, x_limit, y_limit, step_size, max_iterations)
+        path = rrt_star.find_path()
         if path is not None:
-            plt.plot([x for x, y in path], [y for x, y in path], '-b')
-        plt.plot(self.start.x, self.start.y, 'ro', markersize=8)
-        plt.plot(self.goal.x, self.goal.y, 'bo', markersize=8)
-        plt.xlim(self.x_limit)
-        plt.ylim(self.y_limit)
-        plt.xlabel('X')
-        plt.ylabel('Y')
-        plt.title('RRT* Path Planning')
-        plt.grid(True)
-        # plt.show()
+            print("Path found!")
+            print(path)
+            print("The robot orientation: ", current_robot_position[0][2])
+            # x_sp, y_sp = rrt_star.bspline_interpolation(path)  # Get the B-spline interpolated curve
+            # plt.plot(x_sp, y_sp[1], color='purple')  # Plot the B-spline curve
+            # rrt_star.plot(path)
+            return path
+        else:
+            print("Path not found.")
+            return None
