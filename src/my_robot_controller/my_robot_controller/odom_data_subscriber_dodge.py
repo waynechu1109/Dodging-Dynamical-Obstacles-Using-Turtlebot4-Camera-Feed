@@ -161,7 +161,7 @@ class odom_data_subscriber(Node):
 
         if np.abs(current_obstacle_position[0]) < 1e5:
             distance_to_obstacle = np.sqrt((current_obstacle_position[0]-state_arr[0][0])**2+(current_obstacle_position[1]-state_arr[0][1])**2)
-            print('current_obstacle_positionp[0]=', current_obstacle_position[0])
+            print('current_obstacle_position[0]=', current_obstacle_position[0])
             print('distance to obstacle:', distance_to_obstacle)
         else:
             distance_to_obstacle = 1e6   # large number to indicate there is no obstacle in front
@@ -269,7 +269,7 @@ class odom_data_subscriber(Node):
         # publish "turn around" to cmd_velocity, "turning_index" indicate the type of turn
         # turning_index 1 => turn around
         #               2 => orientation adjustment
-        global state_arr, diff_arr
+        global state_arr, diff_arr, dodge
         old_angle = state_arr[0][2]
         # print("old angle: ", old_angle)
         if turning_index == 1:
@@ -279,6 +279,8 @@ class odom_data_subscriber(Node):
                 msg.angular.z = float(0.05)
                 self.publisher_.publish(msg)
                 time.sleep(0.3)
+                if dodge:
+                    break
             return
         elif turning_index == 2:
             if diff_arr[2] > np.pi/6:
