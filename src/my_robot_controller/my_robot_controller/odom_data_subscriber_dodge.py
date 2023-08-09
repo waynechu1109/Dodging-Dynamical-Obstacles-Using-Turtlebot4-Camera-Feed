@@ -22,6 +22,8 @@ import calculate_slope
 import RRT_star as rrts
 import move_next_position
 
+np.set_printoptions(suppress=True, floatmode='fixed')
+
 # obstacle information
 obstacle_state_arr = [[0., 0.], [0., 0.]]  # in odom frame
 #(new)
@@ -29,13 +31,13 @@ initial_obstacle_position = [0., 0., 0.]
 current_obstacle_position = initial_obstacle_position
 obstacle_old_position = [0., 0.]
 obstacle_velocity = 0.
-obstacle_radius = 10.    # (R)
+obstacle_radius = 0.1    # (R) meter
 obstacle_x_velo = obstacle_velocity* np.cos(current_obstacle_position[2])
 obstacle_y_velo = obstacle_velocity* np.sin(current_obstacle_position[2])
 obstacle_temp_list = [[0., 0., 0.], [0., 0., 0.]]  # list for getting the velo. of obstacle
 
 # robot information
-robot_radius = 17.    # cm (r)
+robot_radius = 0.17    # (r) meter
 # initial_robot_position = [249., 250., 1.25*np.pi]    # [x, y, theta]
 # current_robot_position = initial_robot_position
 robot_velocity = 0.0
@@ -60,6 +62,10 @@ iteration_since_see = 0              # number of iteration since robot saw obsta
 
 security_width = obstacle_radius + robot_radius # the additional width around the obstacle for safety 
 
+append_x = 0.
+append_y = 0.
+append_theta = 0.
+
 last_callback_time = None
 
 class odom_data_subscriber(Node):
@@ -69,7 +75,7 @@ class odom_data_subscriber(Node):
 
         # publisher for cmd_vel
         self.publisher_ = self.create_publisher(Twist, '/arches/cmd_vel', 10)
-        self.get_logger().info("start!@!@!@!")
+        self.get_logger().info("start!@!@!")
 
         qos_profile = QoSProfile(
             depth = 10,
@@ -141,14 +147,14 @@ class odom_data_subscriber(Node):
     def odom_callback(self, msg):
         global iteration, state_arr, diff_arr, target, robot_velocity, robot_omega
         global obstacle_state_arr, nearby, see_obstacle, controller_index, dodge
-        global iteration_since_see, current_obstacle_position
+        global iteration_since_see, current_obstacle_position, target
 
         # store the old data
         for i in range(3):
             state_arr[1][i] = state_arr[0][i]  
             #  old one         #  new one
 
-        # recording data from /odom as new data
+        # recording data from /odom as new data (the unit in /odom is SI units)
         state_arr[0][0] = msg.pose.pose.position.x
         state_arr[0][1] = msg.pose.pose.position.y
         quaternion = (msg.pose.pose.orientation.x,
@@ -159,10 +165,21 @@ class odom_data_subscriber(Node):
         euler_angles = euler.quat2euler(quaternion, 'sxyz')
         state_arr[0][2] = euler_angles[0]  # get the "yaw" data
 
+        # if iteration == 1:
+        #     target[0] = state_arr[0][0] + append_x
+        #     target[1] = state_arr[0][1] + append_y
+        #     target[2] = state_arr[0][2] + append_theta
+
+        # set the target orientation as the current orientation at the first iteration
+        if iteration == 1:
+            target[2] = state_arr[0][2]
+
+
         if np.abs(current_obstacle_position[0]) < 1e5:
             distance_to_obstacle = np.sqrt((current_obstacle_position[0]-state_arr[0][0])**2+(current_obstacle_position[1]-state_arr[0][1])**2)
             print('current_obstacle_position[0]=', current_obstacle_position[0])
             print('distance to obstacle:', distance_to_obstacle)
+            print('iteration:', iteration)
         else:
             distance_to_obstacle = 1e6   # large number to indicate there is no obstacle in front
             print('No obstacle in front...')
@@ -170,7 +187,7 @@ class odom_data_subscriber(Node):
         # check if robot near obstacle, if true:
         if ((distance_to_obstacle <= obstacle_radius+robot_radius+safety_margin) and dodge == 0 and 
             np.abs(current_obstacle_position[0]) < 1e5 and current_obstacle_position[0] != 0):
-            print("iteration:", iteration, "obstacle nearby!!")
+            print("iteration:", iteration, "obstacle close to robot!!")
             print('RRT* Path Planning...')
             nearby = 1
             see_obstacle = 1
@@ -192,6 +209,13 @@ class odom_data_subscriber(Node):
                                                             dodge=dodge)
             print('rbt velo, rbt omega = ', robot_velocity, ',', robot_omega)
             # escape the callback function
+            print("state: ", state_arr[0])
+            print()
+
+            # count iteration only if the robot starts moving
+            if np.abs(state_arr[1][0] - state_arr[0][0]) > 0.01 or np.abs(state_arr[1][1] - state_arr[0][1]) > 0.01:
+                iteration += 1
+
             return
         
         if dodge:
@@ -278,7 +302,7 @@ class odom_data_subscriber(Node):
                 msg.linear.x = float(0)
                 msg.angular.z = float(0.05)
                 self.publisher_.publish(msg)
-                time.sleep(0.3)
+                time.sleep(0.1)
                 if dodge:
                     break
             return
@@ -288,22 +312,26 @@ class odom_data_subscriber(Node):
                     msg.linear.x = float(0)
                     msg.angular.z = float(-0.05)   # clockwise
                     self.publisher_.publish(msg)
-                    time.sleep(0.3)
+                    time.sleep(0.1)
             elif diff_arr[2] < np.pi/6:
                 while (np.abs(state_arr[0][2] - old_angle) > np.pi/6):
                     msg.linear.x = float(0)
                     msg.angular.z = float(0.05)   # counter-clockwise
                     self.publisher_.publish(msg)
-                    time.sleep(0.3)
+                    time.sleep(0.1)
 
 
 def main(args=None):
-    global target, state_arr, diff_arr
+    global target, state_arr, diff_arr, append_x, append_y, append_theta
 
     # user input
+    # append_x = float(input("desired x (related to current position): "))
+    # append_y = float(input("desired y (related to current position): "))
+    # append_theta = float(input("desired theta (related to current position): "))
+
     target[0] = float(input("desired x: "))
-    target[1] = float(input("desierd y: "))
-    target[2] = float(input("desired theta: "))
+    target[1] = float(input("desired y: "))
+    # target[2] = float(input("desired theta: "))
 
     rclpy.init(args=args)
     Odom_data_subscriber = odom_data_subscriber()

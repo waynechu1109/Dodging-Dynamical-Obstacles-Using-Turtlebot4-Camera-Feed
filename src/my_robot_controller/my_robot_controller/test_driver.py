@@ -9,7 +9,7 @@ from geometry_msgs.msg import Twist
 class test_driver(Node):
     def __init__(self):
         super().__init__('test_driver')
-        self.publisher_ = self.create_publisher(Twist, '/redwood/cmd_vel', 10)
+        self.publisher_ = self.create_publisher(Twist, '/arches/cmd_vel', 10)
         self.get_logger().info("Driver has been started!!")
 
     def send_command(self, linear, angular):
@@ -36,7 +36,12 @@ def main(args=None):
         linear = float(0)
         angular = float(-0.05)
         teleop_node.send_command(linear, angular)
-        time.sleep(0.5)
+        time.sleep(0.8)
+
+        linear = float(0)
+        angular = float(0.05)
+        teleop_node.send_command(linear, angular)
+        time.sleep(0.8)
         
         # linear = float(0)
         # angular = float(0)

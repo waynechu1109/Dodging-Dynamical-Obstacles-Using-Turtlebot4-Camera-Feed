@@ -225,8 +225,8 @@ class TFListenerNode(Node):
     def get_full_transform_matrix(self, transform_matrix_5, transform_matrix_4, transform_matrix_3, 
                                   transform_matrix_2, transform_matrix_1, transform_matrix_0):
         _543_matrix = np.matmul(np.matmul(transform_matrix_5,transform_matrix_4), transform_matrix_3)
-        # _210_matrix = np.matmul(np.matmul(transform_matrix_2,transform_matrix_1), transform_matrix_0)
-        _210_matrix = np.matmul(transform_matrix_2,transform_matrix_1)
+        _210_matrix = np.matmul(np.matmul(transform_matrix_2,transform_matrix_1), transform_matrix_0)
+        # _210_matrix = np.matmul(transform_matrix_2,transform_matrix_1)
         full_matrix = np.matmul(_543_matrix, _210_matrix)
         return full_matrix
 

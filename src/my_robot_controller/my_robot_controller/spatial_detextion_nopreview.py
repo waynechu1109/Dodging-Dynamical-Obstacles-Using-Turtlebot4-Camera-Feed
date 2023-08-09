@@ -129,9 +129,9 @@ with dai.Device(pipeline) as device:
             newlist = np.array(newlist)     # transfer newlist into array
             if newlist.shape[0]>0:
 
-                data[0] = newlist[0].spatialCoordinates.x
-                data[1] = newlist[0].spatialCoordinates.y
-                data[2] = newlist[0].spatialCoordinates.z
+                data[0] = 0.001* newlist[0].spatialCoordinates.x
+                data[1] = 0.001* newlist[0].spatialCoordinates.y
+                data[2] = 0.001* newlist[0].spatialCoordinates.z
 
                 # print(data)
                 # Open the file in write mode
@@ -181,3 +181,4 @@ with dai.Device(pipeline) as device:
 
         if cv2.waitKey(1) == ord('q'):
             break                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+
