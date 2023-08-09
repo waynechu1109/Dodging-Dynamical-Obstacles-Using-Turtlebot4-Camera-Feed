@@ -36,10 +36,10 @@ def controller(diff_x, diff_y, diff_theta, iteration, initial_velocity, initial_
         omega = 1*u1
 
     # limit the speed
-    if velocity > 0.1:
-        velocity = 0.1   
-    elif velocity < -0.1:
-        velocity = -0.1
+    if velocity > 0.2:
+        velocity = 0.2   
+    elif velocity < -0.2:
+        velocity = -0.2
 
     # print('return velo:', velocity, 'return omega:', omega)
 
