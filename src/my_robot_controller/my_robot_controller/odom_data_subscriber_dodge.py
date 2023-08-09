@@ -117,7 +117,7 @@ class odom_data_subscriber(Node):
             obstacle_temp_list[0][j] = msg.data[j]
 
         # if camera see "None", don't dodge
-        if np.abs(msg.data[0]) > 1e5 and np.abs(msg.data[1]) > 1e5 and np.abs(msg.data[2]) > 1e5:
+        if np.abs(msg.data[0]) > 4 and np.abs(msg.data[1]) > 1e4 and np.abs(msg.data[2]) > 1e4:
             dodge = 0
 
         # predict obstacle trajectory only if robot starts dodging and at particular # of iteration
@@ -175,18 +175,19 @@ class odom_data_subscriber(Node):
             target[2] = state_arr[0][2]
 
 
-        if np.abs(current_obstacle_position[0]) < 1e5:
+        if np.abs(current_obstacle_position[0]) < 1e4:
             distance_to_obstacle = np.sqrt((current_obstacle_position[0]-state_arr[0][0])**2+(current_obstacle_position[1]-state_arr[0][1])**2)
-            print('current_obstacle_position[0]=', current_obstacle_position[0])
+            print('current_obstacle_position=', current_obstacle_position[0], ',', current_obstacle_position[2])
             print('distance to obstacle:', distance_to_obstacle)
             print('iteration:', iteration)
         else:
             distance_to_obstacle = 1e6   # large number to indicate there is no obstacle in front
             print('No obstacle in front...')
+            print('iteration:', iteration)
 
         # check if robot near obstacle, if true:
         if ((distance_to_obstacle <= obstacle_radius+robot_radius+safety_margin) and dodge == 0 and 
-            np.abs(current_obstacle_position[0]) < 1e5 and current_obstacle_position[0] != 0):
+            np.abs(current_obstacle_position[0]) < 1e4 and current_obstacle_position[0] != 0):
             print("iteration:", iteration, "obstacle close to robot!!")
             print('RRT* Path Planning...')
             nearby = 1
@@ -213,7 +214,7 @@ class odom_data_subscriber(Node):
             print()
 
             # count iteration only if the robot starts moving
-            if np.abs(state_arr[1][0] - state_arr[0][0]) > 0.01 or np.abs(state_arr[1][1] - state_arr[0][1]) > 0.01:
+            if np.abs(state_arr[1][0] - state_arr[0][0]) > 0.00001 or np.abs(state_arr[1][1] - state_arr[0][1]) > 0.00001:
                 iteration += 1
 
             return
@@ -257,7 +258,7 @@ class odom_data_subscriber(Node):
                     
         # if the robot is close enough to distination
         if np.sqrt((state_arr[0][0]-target[0])**2 + 
-               (state_arr[0][1]-target[1])**2) < 100.: #or smooth_data_index > len(smooth_data):
+               (state_arr[0][1]-target[1])**2) < 0.1: #or smooth_data_index > len(smooth_data):
             dodge = 0
             for j in range(3):
                 diff_arr[j] = state_arr[0][j] - target[j]
@@ -266,11 +267,13 @@ class odom_data_subscriber(Node):
                                                             iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega,
                                                             dodge=dodge)
             
-        print("state: ", state_arr[0])
+        # print("past state: ", state_arr[1])
+        print("state (ready to go to dist.): ", state_arr[0])
         print()
 
         # count iteration only if the robot starts moving
-        if np.abs(state_arr[1][0] - state_arr[0][0]) > 0.01 or np.abs(state_arr[1][1] - state_arr[0][1]) > 0.01:
+        if np.abs(state_arr[1][0] - state_arr[0][0]) > 0.00001 or np.abs(state_arr[1][1] - state_arr[0][1]) > 0.00001:
+            # print('iteration adding...')
             iteration += 1
 
     def drive(self):
@@ -287,6 +290,7 @@ class odom_data_subscriber(Node):
                 self.publisher_.publish(msg)
                 time.sleep(0.3)
             else:
+                # if velo < 0 => turn around
                 self.turn(msg, turning_index=1)
 
     def turn(self, msg=Twist(), turning_index=1):
@@ -305,7 +309,6 @@ class odom_data_subscriber(Node):
                 time.sleep(0.1)
                 if dodge:
                     break
-            return
         elif turning_index == 2:
             if diff_arr[2] > np.pi/6:
                 while (np.abs(state_arr[0][2] - old_angle) > np.pi/6):
