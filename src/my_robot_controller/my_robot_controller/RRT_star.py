@@ -16,7 +16,7 @@ class RRTStar:
     obstacle_list = []  # Format: (x, y, radius), the position after robot see it
     x_limit = (-1e6, 1e6)    # need the size of the map
     y_limit = (-1e6, 1e6)    # need the size of the map
-    step_size = 5.0
+    step_size = 10.0         # related to the complexity of RRT* path, the less the more complex
     max_iterations = 5000
     # RRT* parameters
 
@@ -80,6 +80,8 @@ class RRTStar:
 
     def find_path(self):
         for iteration in range(self.max_iterations):
+            if iteration % 50 == 0:
+                print("iteration(RRT*):", iteration)
             random_node = self.generate_random_node()
             nearest_node = self.find_nearest_node(random_node)
             new_node = self.steer(nearest_node, random_node)
@@ -100,11 +102,12 @@ class RRTStar:
                 self.rewire(new_node)
                 #'''
                 if self.is_goal_reachable(new_node):
+                    print("iteration(RRT*) find path:", iteration)
                     goal_node = Node(self.goal.x, self.goal.y)
                     goal_node.parent = new_node
                     goal_node.cost = new_node.cost + np.sqrt((new_node.x - self.goal.x) ** 2 + (new_node.y - self.goal.y) ** 2)
                     self.node_list.append(goal_node)
-                    print("iteration(RRT*):", iteration)
+                    # print("iteration(RRT*):", iteration)
                     return self.extract_path(goal_node)
                 
                 #'''

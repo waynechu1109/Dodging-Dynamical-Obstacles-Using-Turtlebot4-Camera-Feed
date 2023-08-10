@@ -73,7 +73,7 @@ class odom_data_subscriber(Node):
 
         # publisher for cmd_vel
         self.publisher_ = self.create_publisher(Twist, '/arches/cmd_vel', 10)
-        self.get_logger().info("start!@!123!")
+        self.get_logger().info("start!@!789!")
 
         qos_profile = QoSProfile(
             depth = 10,
@@ -120,7 +120,7 @@ class odom_data_subscriber(Node):
             dodge = 0
 
         # predict obstacle trajectory only if robot starts dodging and at particular # of iteration
-        if dodge and iteration_since_see%5 == 0:
+        if dodge and iteration_since_see%10 == 1:
             rrts.RRTStar.obstacle_list = []   # clear the list every time come in this function
             # current_obstacle_position = [msg.data[0], msg.data[1], 0.]            # the last element should be orientation !!!
             # print('data from odom_obstacle_info', current_obstacle_position)
@@ -136,7 +136,7 @@ class odom_data_subscriber(Node):
                 print('obstacle x velo:', obstacle_x_velo, 'obstacle y velo:', obstacle_y_velo)
 
             # do obstacle trajectory prediction
-            predicted_length = 30
+            predicted_length = 75
             for i in range(predicted_length):
                 obstacle_list_x = current_obstacle_position[0]+obstacle_x_velo*i*elapsed_time
                 obstacle_list_y = current_obstacle_position[1]+obstacle_x_velo*i*elapsed_time
@@ -173,7 +173,7 @@ class odom_data_subscriber(Node):
         if iteration == 1:
             target[0] = state_arr[0][0] + distance_proceed*np.cos(state_arr[0][2])
             target[1] = state_arr[0][1] + distance_proceed*np.sin(state_arr[0][2])
-            target[2] = 0*np.pi
+            target[2] = -1*np.pi   # here I set the constant target orientation
             print('target:', target)
 
             # robot can only drive after the target is calculated
@@ -228,7 +228,7 @@ class odom_data_subscriber(Node):
             # return
         
         if dodge:
-            if iteration_since_see%5 == 0:
+            if iteration_since_see%10 == 0:
                 # set RRT* starting point and goal
                 rrts.RRTStar.start = (state_arr[0][0], state_arr[0][1])
                 rrts.RRTStar.goal = (target[0], target[1])
@@ -263,6 +263,8 @@ class odom_data_subscriber(Node):
                 robot_velocity, robot_omega = ctr.controller(diff_x=diff_arr[0], diff_y=diff_arr[1], diff_theta=diff_arr[2],
                                                             iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega,
                                                             dodge=dodge)
+            
+            print('iteration since see:', iteration_since_see, 'dodge:', dodge)
             iteration_since_see += 1
                     
         # if the robot is close enough to distination
