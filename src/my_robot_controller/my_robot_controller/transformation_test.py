@@ -11,6 +11,7 @@ from nav_msgs.msg import Odometry
 from std_msgs.msg import Float64MultiArray
 from scipy.spatial.transform import Rotation as R
 from rclpy.qos import QoSProfile, ReliabilityPolicy
+import transforms3d.euler as euler
 
 np.set_printoptions(suppress=True, floatmode='fixed')
 
@@ -85,7 +86,7 @@ class TFListenerNode(Node):
         # wait for full_matrix be assigned some values
         if np.size(full_matrix) != 0:
             odom_matrix = np.matmul(full_matrix, camera_matrix) # if "None", camera matrix will be very large
-            print('coord in odom:\n', odom_matrix)
+            print('obstacle coord in odom:\n', odom_matrix)
             print()
 
     def do_odom_transform_callback(self, msg):
@@ -120,6 +121,21 @@ class TFListenerNode(Node):
         # print('full matrix:')
         # print(full_matrix)
         # print()
+
+        # get the odom data here for clarifying initial position
+        robot_x = msg.pose.pose.position.x
+        robot_y = msg.pose.pose.position.y
+        quaternion = (msg.pose.pose.orientation.x,
+                    msg.pose.pose.orientation.y,
+                    msg.pose.pose.orientation.z,
+                    msg.pose.pose.orientation.w
+                    )
+        euler_angles = euler.quat2euler(quaternion, 'sxyz')
+        robot_theta = euler_angles[0]  # get the "yaw" data
+        print('robot coord in odom:\n', robot_x)
+        print(robot_y)
+        print(robot_theta/np.pi, 'pi')
+        print()
         
         callback_counter += 1
 

@@ -5,6 +5,8 @@ def controller(diff_x, diff_y, diff_theta, iteration, initial_velocity, initial_
 
     # print('now come in the controller function...')
 
+    speed_limit = 0.05
+
     if dodge:
         k1 = 500e-4
         k2 = (20*k1)
@@ -36,10 +38,10 @@ def controller(diff_x, diff_y, diff_theta, iteration, initial_velocity, initial_
         omega = 1*u1
 
     # limit the speed
-    if velocity > 0.2:
-        velocity = 0.2   
-    elif velocity < -0.2:
-        velocity = -0.2
+    if velocity > speed_limit:
+        velocity = speed_limit   
+    elif velocity < -speed_limit:
+        velocity = -speed_limit
 
     # print('return velo:', velocity, 'return omega:', omega)
 
