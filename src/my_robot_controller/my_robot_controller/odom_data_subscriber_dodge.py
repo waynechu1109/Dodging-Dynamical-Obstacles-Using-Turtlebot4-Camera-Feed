@@ -58,7 +58,7 @@ dodge = 0
 nearby = 0
 
 iteration = 1                        # record the index
-iteration_since_see = 0              # number of iteration since robot saw obstacle
+iteration_since_detect = 0              # number of iteration since robot saw obstacle
 
 security_width = obstacle_radius + robot_radius # the additional width around the obstacle for safety 
 
@@ -73,7 +73,7 @@ class odom_data_subscriber(Node):
 
         # publisher for cmd_vel
         self.publisher_ = self.create_publisher(Twist, '/arches/cmd_vel', 10)
-        self.get_logger().info("start!@!789!")
+        self.get_logger().info("start!@!123!")
 
         qos_profile = QoSProfile(
             depth = 10,
@@ -95,13 +95,16 @@ class odom_data_subscriber(Node):
             10
         )
 
+
     def odom_obstacle_info_callback(self, msg):
         global security_width, obstacle_temp_list, last_callback_time, dodge
-        global iteration_since_see, current_obstacle_position
+        global iteration_since_detect, current_obstacle_position
+        # print('odom_obstacle_info_callback...')
         elapsed_time = 0                    # for getting time duration between each callback
         callback_start_time = time.time() 
         if last_callback_time is not None:
             elapsed_time = callback_start_time - last_callback_time
+            print('odom_obstacle_callback elapse time:', elapsed_time)
         last_callback_time = callback_start_time
 
         current_obstacle_position = [msg.data[0], msg.data[1], 0.]            # the last element should be orientation !!!
@@ -113,6 +116,7 @@ class odom_data_subscriber(Node):
 
         # recording data from /odom_obstacle_info as new data
         for j in range(3):
+            print('storing obstacle data...')
             obstacle_temp_list[0][j] = msg.data[j]
 
         # if camera see "None", don't dodge
@@ -120,7 +124,8 @@ class odom_data_subscriber(Node):
             dodge = 0
 
         # predict obstacle trajectory only if robot starts dodging and at particular # of iteration
-        if dodge and iteration_since_see%10 == 1:
+        if dodge and iteration_since_detect%30 == 0:
+            print('now appending obstacle list...')
             rrts.RRTStar.obstacle_list = []   # clear the list every time come in this function
             # current_obstacle_position = [msg.data[0], msg.data[1], 0.]            # the last element should be orientation !!!
             # print('data from odom_obstacle_info', current_obstacle_position)
@@ -136,7 +141,7 @@ class odom_data_subscriber(Node):
                 print('obstacle x velo:', obstacle_x_velo, 'obstacle y velo:', obstacle_y_velo)
 
             # do obstacle trajectory prediction
-            predicted_length = 75
+            predicted_length = 30
             for i in range(predicted_length):
                 obstacle_list_x = current_obstacle_position[0]+obstacle_x_velo*i*elapsed_time
                 obstacle_list_y = current_obstacle_position[1]+obstacle_x_velo*i*elapsed_time
@@ -146,7 +151,7 @@ class odom_data_subscriber(Node):
     def odom_callback(self, msg):
         global iteration, state_arr, diff_arr, target, robot_velocity, robot_omega
         global obstacle_state_arr, nearby, see_obstacle, controller_index, dodge
-        global iteration_since_see, current_obstacle_position, target, distance_proceed
+        global iteration_since_detect, current_obstacle_position, target, distance_proceed
 
         # store the old data
         for i in range(3):
@@ -181,17 +186,21 @@ class odom_data_subscriber(Node):
             driving_thread = threading.Thread(target = self.drive)
             driving_thread.start()
 
+        if iteration%50 == 0:
+            print('current_obstacle_position=', current_obstacle_position[0], ',', current_obstacle_position[1])
 
         if np.abs(current_obstacle_position[0]) < 1e4:
             distance_to_obstacle = np.sqrt((current_obstacle_position[0]-state_arr[0][0])**2+(current_obstacle_position[1]-state_arr[0][1])**2)
             # print('current_obstacle_position=', current_obstacle_position[0], ',', current_obstacle_position[1])
-            # print('distance to obstacle:', distance_to_obstacle)
+            if iteration%50 == 0:
+                print('distance to obstacle:', distance_to_obstacle)
             # print('min. dist. need to dodge the obstacle:', obstacle_radius + robot_radius + safety_margin)
             # print('dodge:', dodge)
             # print('iteration:', iteration)
         else:
             distance_to_obstacle = 1e6   # large number to indicate there is no obstacle in front
-            # print('No obstacle in front...')
+            if iteration%50 == 0:
+                print('No obstacle in front...')
             # print('iteration:', iteration)
 
         # check if robot near obstacle, if true:
@@ -228,7 +237,7 @@ class odom_data_subscriber(Node):
             # return
         
         if dodge:
-            if iteration_since_see%10 == 0:
+            if iteration_since_detect%30 == 0:
                 # set RRT* starting point and goal
                 rrts.RRTStar.start = (state_arr[0][0], state_arr[0][1])
                 rrts.RRTStar.goal = (target[0], target[1])
@@ -264,8 +273,8 @@ class odom_data_subscriber(Node):
                                                             iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega,
                                                             dodge=dodge)
             
-            print('iteration since see:', iteration_since_see, 'dodge:', dodge)
-            iteration_since_see += 1
+            print('iteration since see:', iteration_since_detect, 'dodge:', dodge)
+            iteration_since_detect += 1
                     
         # if the robot is close enough to distination
         if np.sqrt((state_arr[0][0]-target[0])**2 + (state_arr[0][1]-target[1])**2) < 1.:

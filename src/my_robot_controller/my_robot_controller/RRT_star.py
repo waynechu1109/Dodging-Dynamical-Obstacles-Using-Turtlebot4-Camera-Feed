@@ -16,8 +16,8 @@ class RRTStar:
     obstacle_list = []  # Format: (x, y, radius), the position after robot see it
     x_limit = (-1e6, 1e6)    # need the size of the map
     y_limit = (-1e6, 1e6)    # need the size of the map
-    step_size = 10.0         # related to the complexity of RRT* path, the less the more complex
-    max_iterations = 5000
+    step_size = 0.8         # related to the complexity of RRT* path, the less the more complex
+    max_iterations = 500
     # RRT* parameters
 
     def __init__(self, start, goal, obstacle_list, x_limit, y_limit, step_size=1.0, max_iterations=1000):
