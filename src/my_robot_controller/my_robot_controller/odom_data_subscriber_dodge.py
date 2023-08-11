@@ -173,7 +173,7 @@ class odom_data_subscriber(Node):
                   current_obstacle_position[1], ',', 
                   current_obstacle_position[2]/np.pi, 'pi')
 
-        if np.abs(current_obstacle_position[0]) < 1e4:
+        if np.abs(current_obstacle_position[0]) < 10000:
             distance_to_obstacle = np.sqrt((current_obstacle_position[0]-state_arr[0][0])**2+(current_obstacle_position[1]-state_arr[0][1])**2)
             # print('current_obstacle_position=', current_obstacle_position[0], ',', current_obstacle_position[1])
             if iteration%50 == 0:
@@ -182,7 +182,7 @@ class odom_data_subscriber(Node):
             # print('dodge:', dodge)
             # print('iteration:', iteration)
         else:
-            distance_to_obstacle = 1e6   # large number to indicate there is no obstacle in front
+            distance_to_obstacle = 1000000   # large number to indicate there is no obstacle in front
             if iteration%50 == 0:
                 print('No obstacle in front...')
             # print('iteration:', iteration)
