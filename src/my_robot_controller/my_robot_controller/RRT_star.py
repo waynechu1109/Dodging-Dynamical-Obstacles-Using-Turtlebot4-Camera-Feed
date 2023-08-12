@@ -14,8 +14,8 @@ class RRTStar:
     start = (0., 0.)
     goal = (0., 0.)
     obstacle_list = []  # Format: (x, y, radius), the position after robot see it
-    x_limit = (-1e6, 1e6)    # need the size of the map
-    y_limit = (-1e6, 1e6)    # need the size of the map
+    x_limit = (0., 0.)    # need the size of the map
+    y_limit = (0., 0.)    # need the size of the map
     step_size = 0.5          # related to the complexity of RRT* path, the less the more complex
     max_iterations = 500
     # RRT* parameters

@@ -52,7 +52,7 @@ state_arr = np.zeros((2, 3))  # robot state
 diff_arr = [0., 0., 0.]
 controller_index = 0
 
-safety_margin = 10*robot_radius
+safety_margin = 12*robot_radius
 
 dodge = 0
 nearby = 0
@@ -60,11 +60,18 @@ nearby = 0
 iteration = 1                        # record the index
 iteration_since_detect = 0              # number of iteration since robot detect obstacle
 
-security_width = obstacle_radius + robot_radius # the additional width around the obstacle for safety 
+security_width = obstacle_radius + 1.5*robot_radius # the additional width around the obstacle for safety 
 
 distance_proceed = 0.
 
 last_callback_time = None
+doneBezier = False
+
+# Bezier curve parameters
+smooth_data = []
+smooth_theta = 0.
+smooth_data_index = 0
+
 
 class odom_data_subscriber(Node):
 
@@ -73,7 +80,7 @@ class odom_data_subscriber(Node):
 
         # publisher for cmd_vel
         self.publisher_ = self.create_publisher(Twist, '/arches/cmd_vel', 10)
-        self.get_logger().info("start!567!")
+        self.get_logger().info("start^^)))!")
 
         qos_profile = QoSProfile(
             depth = 10,
@@ -124,9 +131,10 @@ class odom_data_subscriber(Node):
             dodge = 0
 
     def odom_callback(self, msg):
-        global iteration, state_arr, diff_arr, target, robot_velocity, robot_omega
+        global iteration, state_arr, diff_arr, target, robot_velocity, robot_omega, doneBezier
         global obstacle_state_arr, nearby, see_obstacle, controller_index, dodge, last_callback_time
         global iteration_since_detect, current_obstacle_position, target, distance_proceed
+        global smooth_data, smooth_theta, smooth_data_index
 
         elapsed_time = 0                    # for getting time duration between each callback
         callback_start_time = time.time() 
@@ -151,8 +159,21 @@ class odom_data_subscriber(Node):
         euler_angles = euler.quat2euler(quaternion, 'sxyz')
         state_arr[0][2] = euler_angles[0]  # get the "yaw" data
 
+        # set the size of the map of RRT* #
+        # print('robot orientation=', state_arr[0][2]/np.pi, 'pi')
+        if np.abs(np.cos(state_arr[0][2])) >= np.abs(np.sin(state_arr[0][2])):
+            rrts.RRTStar.x_limit = (state_arr[0][0]+1*distance_proceed*np.cos(state_arr[0][2]), state_arr[0][0])
+            rrts.RRTStar.y_limit = (state_arr[0][1]+1*distance_proceed*np.cos(state_arr[0][2]), state_arr[0][1])
+        else:
+            rrts.RRTStar.x_limit = (state_arr[0][0]+1*distance_proceed*np.sin(state_arr[0][2]), state_arr[0][0])
+            rrts.RRTStar.y_limit = (state_arr[0][1]+1*distance_proceed*np.sin(state_arr[0][2]), state_arr[0][1])
+        # set the size of the map of RRT* #
+
         if iteration%50 == 1:
             print('iteration:', iteration)
+
+        if iteration_since_detect % 10 == 1:
+            print('iteration_since_detect:', iteration_since_detect)
 
         # set the target and start driving
         if iteration == 1:
@@ -164,27 +185,31 @@ class odom_data_subscriber(Node):
             # robot can only drive after the target is calculated
             driving_thread = threading.Thread(target = self.drive)
             driving_thread.start()
+            print()
             print('start driving...')
+            print()
 
         # print the position of obstacle every 50 iterations
-        if iteration%50 == 1:
-            print('current_obstacle_position=', 
-                  current_obstacle_position[0], ',', 
-                  current_obstacle_position[1], ',', 
-                  current_obstacle_position[2]/np.pi, 'pi')
+        # if iteration%50 == 1:
+        #     print('current_obstacle_position=', 
+        #           current_obstacle_position[0], ',', 
+        #           current_obstacle_position[1], ',', 
+        #           current_obstacle_position[2]/np.pi, 'pi')
 
         if np.abs(current_obstacle_position[0]) < 10000:
             distance_to_obstacle = np.sqrt((current_obstacle_position[0]-state_arr[0][0])**2+(current_obstacle_position[1]-state_arr[0][1])**2)
             # print('current_obstacle_position=', current_obstacle_position[0], ',', current_obstacle_position[1])
             if iteration%50 == 0:
-                print('distance to obstacle:', distance_to_obstacle)
+                # print('distance to obstacle:', distance_to_obstacle)
+                pass
             # print('min. dist. need to dodge the obstacle:', obstacle_radius + robot_radius + safety_margin)
             # print('dodge:', dodge)
             # print('iteration:', iteration)
         else:
             distance_to_obstacle = 1000000   # large number to indicate there is no obstacle in front
             if iteration%50 == 0:
-                print('No obstacle in front...')
+                # print('No obstacle in front...')
+                pass
             # print('iteration:', iteration)
 
         # check if robot near obstacle, if true:
@@ -221,52 +246,73 @@ class odom_data_subscriber(Node):
             # return
         
         # predict obstacle trajectory only if robot starts dodging and at particular # of iteration
-        if dodge and iteration_since_detect%30 == 0:
-            print('now appending obstacle list...')
-            rrts.RRTStar.obstacle_list = []   # clear the list every time come in this function
-            # current_obstacle_position = [msg.data[0], msg.data[1], 0.]            # the last element should be orientation !!!
-            # print('data from odom_obstacle_info', current_obstacle_position)
-            rrts.RRTStar.obstacle_list.append([current_obstacle_position[0],
-                                    current_obstacle_position[1],
-                                    security_width])
-            # print('data in obstacle_list:', rrts.RRTStar.obstacle_list)
-
-            # get obstacle velo
-            if elapsed_time != 0:
-                obstacle_x_velo = (obstacle_temp_list[0][0]-obstacle_temp_list[1][0])/elapsed_time
-                obstacle_y_velo = (obstacle_temp_list[1][0]-obstacle_temp_list[1][1])/elapsed_time
-                print('obstacle x velo:', obstacle_x_velo, 'obstacle y velo:', obstacle_y_velo)
-
-                # do obstacle trajectory prediction
-                predicted_length = 30
-                for i in range(predicted_length):
-                    obstacle_list_x = current_obstacle_position[0]+obstacle_x_velo*i*elapsed_time
-                    obstacle_list_y = current_obstacle_position[1]+obstacle_x_velo*i*elapsed_time
-                    rrts.RRTStar.obstacle_list.append([obstacle_list_x, obstacle_list_y, security_width*(1-(i/predicted_length))])
-
         if dodge:
             if iteration_since_detect%30 == 0:
+                doneBezier = False
+                print('now appending obstacle list...')
+                rrts.RRTStar.obstacle_list = []   # clear the list every time come in this function
+                # current_obstacle_position = [msg.data[0], msg.data[1], 0.]            # the last element should be orientation !!!
+                # print('data from odom_obstacle_info', current_obstacle_position)
+                rrts.RRTStar.obstacle_list.append([current_obstacle_position[0],
+                                        current_obstacle_position[1],
+                                        security_width])
+                # print('append list:\n', current_obstacle_position[0], ',', current_obstacle_position[1])
+                # print('data in obstacle_list:', rrts.RRTStar.obstacle_list)
+
+                # get obstacle velo
+                if elapsed_time != 0:
+                    obstacle_x_velo = (obstacle_temp_list[0][0]-obstacle_temp_list[1][0])/elapsed_time
+                    obstacle_y_velo = (obstacle_temp_list[1][0]-obstacle_temp_list[1][1])/elapsed_time
+                    print('obstacle x velo:', obstacle_x_velo, 'obstacle y velo:', obstacle_y_velo)
+
+                    # print('now robot postion:', state_arr[0][0], ',',state_arr[0][1])
+                    # do obstacle trajectory prediction
+                    predicted_length = 5
+                    print('obstacle list:')
+                    for i in range(predicted_length):
+                        obstacle_list_x = current_obstacle_position[0]+obstacle_x_velo*i*elapsed_time
+                        obstacle_list_y = current_obstacle_position[1]+obstacle_x_velo*i*elapsed_time
+                        rrts.RRTStar.obstacle_list.append([obstacle_list_x, obstacle_list_y, security_width*(1-(i/predicted_length))])
+                        print('(' ,obstacle_list_x, ',', obstacle_list_y, ',', security_width*(1-(i/predicted_length)), '),')
+                        if np.sqrt((target[0]-obstacle_list_x)**2 + (target[1]-obstacle_list_y)**2) < security_width*(1-(i/predicted_length)):
+                            print('target is in the prohibited zone!!!')
+
+                print()
+                print('RRT* map size:')
+                print('x_limit=', rrts.RRTStar.x_limit)
+                print('y_limit=', rrts.RRTStar.y_limit)
                 # set RRT* starting point and goal
                 rrts.RRTStar.start = (state_arr[0][0], state_arr[0][1])
                 rrts.RRTStar.goal = (target[0], target[1])
+                print('start=', rrts.RRTStar.start)
+                print('goal=', rrts.RRTStar.goal)
                 # RRT*
                 print('RRT* Path Planning...')
+                print()
+
+                # when doing RRT*, stop the roboot
+                robot_velocity = 0
+                robot_omega = 0
+
                 path = rrts.RRTStar.do_RRTstar(start=rrts.RRTStar.start,
-                                          goal=rrts.RRTStar.goal,
-                                          obstacle_list=rrts.RRTStar.obstacle_list,    # obstacle list need the data from camera
-                                          x_limit=rrts.RRTStar.x_limit,
-                                          y_limit=rrts.RRTStar.y_limit,
-                                          step_size=rrts.RRTStar.step_size,
-                                          max_iterations=rrts.RRTStar.max_iterations,
-                                          current_robot_position=state_arr
-                                          )
+                                            goal=rrts.RRTStar.goal,
+                                            obstacle_list=rrts.RRTStar.obstacle_list,    # obstacle list need the data from camera
+                                            x_limit=rrts.RRTStar.x_limit,
+                                            y_limit=rrts.RRTStar.y_limit,
+                                            step_size=rrts.RRTStar.step_size,
+                                            max_iterations=rrts.RRTStar.max_iterations,
+                                            current_robot_position=state_arr
+                                            )
                 
                 # Create Bezier Curve
                 smooth_data, smooth_theta, x_smooth_reversed, y_smooth_reversed = bcurve.create_BezierCurve(path)
                 controller_index = 0
                 smooth_data_index = 150      # record which point is temporary target
                 smooth_data_increase = smooth_data_index
+                doneBezier = True
+                print('\nDone Bezier Curve...\n')
 
+            if doneBezier:
                 # get the difference
                 for j in range(2):
                     diff_arr[j] = state_arr[0][j] - smooth_data[smooth_data_index][j]
@@ -280,9 +326,10 @@ class odom_data_subscriber(Node):
                 robot_velocity, robot_omega = ctr.controller(diff_x=diff_arr[0], diff_y=diff_arr[1], diff_theta=diff_arr[2],
                                                             iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega,
                                                             dodge=dodge)
-            
-            # print('iteration since detect:', iteration_since_detect, 'dodge:', dodge)
-            iteration_since_detect += 1
+                if iteration % 30 == 0:
+                    print('\nRRT* path control...\n')
+                # print('iteration since detect:', iteration_since_detect, 'dodge:', dodge)
+                iteration_since_detect += 1    ######################
                     
         # if the robot is close enough to distination
         if np.sqrt((state_arr[0][0]-target[0])**2 + (state_arr[0][1]-target[1])**2) < 1.:
@@ -294,9 +341,9 @@ class odom_data_subscriber(Node):
                                                             iteration=iteration, initial_velocity=robot_velocity, initial_omega=robot_omega,
                                                             dodge=dodge)
             # print("past state: ", state_arr[1])
-            print("state (ready to go to dist.): ", state_arr[0])
-            # print('target:', target)
-            print()
+            if iteration%50 == 0:
+                print("state (ready to go to dist.): ", state_arr[0])
+                # print('target:', target)
             if np.sqrt((state_arr[0][0]-target[0])**2 + (state_arr[0][1]-target[1])**2) < 0.3:
                 print('target reached!')
                 quit()
@@ -325,7 +372,6 @@ class odom_data_subscriber(Node):
         # publish "turn around" to cmd_velocity, "turning_index" indicate the type of turn
         # turning_index 1 => turn around
         #               2 => orientation adjustment
-
         global state_arr, diff_arr, dodge, robot_velocity
         old_angle = state_arr[0][2]
         # print("old angle: ", old_angle)
@@ -334,7 +380,7 @@ class odom_data_subscriber(Node):
             while np.abs(state_arr[0][2] - old_angle) < np.pi-1 or np.abs(state_arr[0][2] - old_angle) > np.pi+1:
                 # print("diff.: ", np.abs(state_arr[0][2] - old_angle))
                 msg.linear.x = float(0)
-                msg.angular.z = float(0.05)
+                msg.angular.z = float(0.2)
                 self.publisher_.publish(msg)
                 time.sleep(0.3)
                 # if dodge:
@@ -345,13 +391,13 @@ class odom_data_subscriber(Node):
             if diff_arr[2] > np.pi/6:
                 while (np.abs(state_arr[0][2] - old_angle) > np.pi/6):
                     msg.linear.x = float(0)
-                    msg.angular.z = float(-0.05)   # clockwise
+                    msg.angular.z = float(-0.2)   # clockwise
                     self.publisher_.publish(msg)
                     time.sleep(0.3)
             elif diff_arr[2] < np.pi/6:
                 while (np.abs(state_arr[0][2] - old_angle) > np.pi/6):
                     msg.linear.x = float(0)
-                    msg.angular.z = float(0.05)   # counter-clockwise
+                    msg.angular.z = float(0.2)    # counter-clockwise
                     self.publisher_.publish(msg)
                     time.sleep(0.3)
 

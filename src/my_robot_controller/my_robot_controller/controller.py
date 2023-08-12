@@ -5,7 +5,7 @@ def controller(diff_x, diff_y, diff_theta, iteration, initial_velocity, initial_
 
     # print('now come in the controller function...')
 
-    speed_limit = 0.05
+    speed_limit = 0.075
 
     if dodge:
         k1 = 500e-4
