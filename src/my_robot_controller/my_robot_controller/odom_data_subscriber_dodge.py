@@ -60,7 +60,7 @@ nearby = 0
 iteration = 1                        # record the index
 iteration_since_detect = 0              # number of iteration since robot detect obstacle
 
-security_width = obstacle_radius + 1.5*robot_radius # the additional width around the obstacle for safety 
+security_width = obstacle_radius + 2.5*robot_radius # the additional width around the obstacle for safety 
 
 distance_proceed = 0.
 
@@ -80,7 +80,7 @@ class odom_data_subscriber(Node):
 
         # publisher for cmd_vel
         self.publisher_ = self.create_publisher(Twist, '/arches/cmd_vel', 10)
-        self.get_logger().info("start^^)))!")
+        self.get_logger().info("start^^))!")
 
         qos_profile = QoSProfile(
             depth = 10,
@@ -172,8 +172,8 @@ class odom_data_subscriber(Node):
         if iteration%50 == 1:
             print('iteration:', iteration)
 
-        if iteration_since_detect % 10 == 1:
-            print('iteration_since_detect:', iteration_since_detect)
+        # if iteration_since_detect % 10 == 1:
+        #     print('iteration_since_detect:', iteration_since_detect)
 
         # set the target and start driving
         if iteration == 1:
@@ -267,12 +267,12 @@ class odom_data_subscriber(Node):
 
                     # print('now robot postion:', state_arr[0][0], ',',state_arr[0][1])
                     # do obstacle trajectory prediction
-                    predicted_length = 5
+                    predicted_length = 10
                     print('obstacle list:')
                     for i in range(predicted_length):
                         obstacle_list_x = current_obstacle_position[0]+obstacle_x_velo*i*elapsed_time
                         obstacle_list_y = current_obstacle_position[1]+obstacle_x_velo*i*elapsed_time
-                        rrts.RRTStar.obstacle_list.append([obstacle_list_x, obstacle_list_y, security_width*(1-(i/predicted_length))])
+                        rrts.RRTStar.obstacle_list.append([obstacle_list_x, obstacle_list_y, security_width*1])   # (1-(i/predicted_length))
                         print('(' ,obstacle_list_x, ',', obstacle_list_y, ',', security_width*(1-(i/predicted_length)), '),')
                         if np.sqrt((target[0]-obstacle_list_x)**2 + (target[1]-obstacle_list_y)**2) < security_width*(1-(i/predicted_length)):
                             print('target is in the prohibited zone!!!')
@@ -307,7 +307,7 @@ class odom_data_subscriber(Node):
                 # Create Bezier Curve
                 smooth_data, smooth_theta, x_smooth_reversed, y_smooth_reversed = bcurve.create_BezierCurve(path)
                 controller_index = 0
-                smooth_data_index = 150      # record which point is temporary target
+                smooth_data_index = 200      # record which point is temporary target
                 smooth_data_increase = smooth_data_index
                 doneBezier = True
                 print('\nDone Bezier Curve...\n')
@@ -346,6 +346,9 @@ class odom_data_subscriber(Node):
                 # print('target:', target)
             if np.sqrt((state_arr[0][0]-target[0])**2 + (state_arr[0][1]-target[1])**2) < 0.3:
                 print('target reached!')
+                # stop the robot when the target is reached
+                robot_velocity = 0
+                robot_omega = 0
                 quit()
 
         # count iteration only if the robot starts moving
@@ -380,7 +383,7 @@ class odom_data_subscriber(Node):
             while np.abs(state_arr[0][2] - old_angle) < np.pi-1 or np.abs(state_arr[0][2] - old_angle) > np.pi+1:
                 # print("diff.: ", np.abs(state_arr[0][2] - old_angle))
                 msg.linear.x = float(0)
-                msg.angular.z = float(0.2)
+                msg.angular.z = float(1)
                 self.publisher_.publish(msg)
                 time.sleep(0.3)
                 # if dodge:
@@ -420,3 +423,4 @@ def main(args=None):
 
     Odom_data_subscriber.destroy_node()
     rclpy.shutdown()
+
