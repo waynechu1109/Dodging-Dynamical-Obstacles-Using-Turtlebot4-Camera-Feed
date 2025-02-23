@@ -83,15 +83,9 @@ $ ros2 run robot_controller movement_node
 ### **Simulation**
 The robot successfully detects moving obstacles, recalculates paths, and dodges them dynamically while progressing toward its destination.
 
-### **Demonstration Video**
-[Watch the demonstration on YouTube](https://www.youtube.com/watch?v=wdz8laYMFX0)
-
 ## Future Applications
 - **Self-Driving Cars:** Potential to reduce costs by replacing LiDAR-based obstacle avoidance with camera-based systems.
 - **Unmanned Aerial Vehicles (UAVs):** Enhancing drone navigation safety by incorporating vision-based obstacle avoidance.
-
-## References
-For technical details and citations, please refer to the [ISRP Report](https://github.com/waynechu1109/Dodging-Dynamical-Obstacles-Using-Turtlebot4-Camera-Feed/blob/main/ISRP_Report.pdf).
 
 ## Contact
 Developed by **Wei-Teng Chu** under the mentorship of **Neilabh Banzal, Parth Paritosh, Scott Addams**, and **Prof. Jorge Cortés** at the **Multi-Agent Robotics (MURO) Lab, UC San Diego**.
